@@ -1,11 +1,14 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { DEMO_CREDENTIALS, studentProfile } from "@/data/mock-data";
 import type { StudentProfile } from "@/lib/types";
 
+const SESSION_KEY = "student-app-auth";
+
 interface AuthState {
   isAuthenticated: boolean;
+  isLoading: boolean;
   student: StudentProfile | null;
   login: (username: string, password: string) => boolean;
   logout: () => void;
@@ -13,9 +16,24 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
+function getStoredAuth(): boolean {
+  if (typeof window === "undefined") return false;
+  return sessionStorage.getItem(SESSION_KEY) === "true";
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [student, setStudent] = useState<StudentProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Restore session on mount
+  useEffect(() => {
+    if (getStoredAuth()) {
+      setIsAuthenticated(true);
+      setStudent(studentProfile);
+    }
+    setIsLoading(false);
+  }, []);
 
   const login = useCallback((username: string, password: string): boolean => {
     if (
@@ -24,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ) {
       setIsAuthenticated(true);
       setStudent(studentProfile);
+      sessionStorage.setItem(SESSION_KEY, "true");
       return true;
     }
     return false;
@@ -32,10 +51,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setIsAuthenticated(false);
     setStudent(null);
+    sessionStorage.removeItem(SESSION_KEY);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, student, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, student, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

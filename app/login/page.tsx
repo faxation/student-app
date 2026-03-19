@@ -12,10 +12,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
   // Redirect if already authenticated
+  if (authLoading) return null;
   if (isAuthenticated) {
     router.replace("/home");
     return null;
