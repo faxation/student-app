@@ -10,6 +10,7 @@ import {
   ClipboardList,
   FileText,
   BookOpen,
+  ClipboardCheck,
   DollarSign,
   LogOut,
   GraduationCap,
@@ -23,6 +24,7 @@ const navItems = [
   { label: "Assignments", href: "/assignments", icon: ClipboardList },
   { label: "Exams", href: "/exams", icon: FileText },
   { label: "Courses", href: "/courses", icon: BookOpen },
+  { label: "Attendance", href: "/attendance", icon: ClipboardCheck },
   { label: "Finance", href: "/finance", icon: DollarSign },
 ];
 

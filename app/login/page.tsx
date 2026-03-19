@@ -65,7 +65,7 @@ export default function LoginPage() {
 
           <div className="mt-12 flex gap-8 text-brand-100">
             <div>
-              <p className="text-3xl font-semibold text-white">6</p>
+              <p className="text-3xl font-semibold text-white">7</p>
               <p className="text-sm mt-1">Modules</p>
             </div>
             <div>

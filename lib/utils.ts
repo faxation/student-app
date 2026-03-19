@@ -13,7 +13,7 @@ export function formatDate(dateStr: string): string {
   });
 }
 
-/** Format currency */
+/** Format currency (USD) */
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -21,6 +21,11 @@ export function formatCurrency(amount: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+/** Format Lebanese Pound amount */
+export function formatLBP(amount: number): string {
+  return `LL ${new Intl.NumberFormat("en-US").format(amount)}`;
 }
 
 /** Days until a given date */

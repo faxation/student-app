@@ -9,6 +9,11 @@ export interface StudentProfile {
   semester: string;
   gpa: number;
   avatarInitials: string;
+  faculty?: string;
+  program?: string;
+  advisor?: string;
+  creditsCompleted?: number;
+  creditsRequired?: number;
 }
 
 export interface Announcement {
@@ -68,22 +73,46 @@ export interface Course {
   latestActivity: string;
 }
 
-export interface Transaction {
-  id: string;
-  description: string;
-  amount: number;
-  date: string;
-  type: "charge" | "payment" | "scholarship";
-  status: "completed" | "pending";
+export interface AttendanceRecord {
+  courseCode: string;
+  courseName: string;
+  section: string;
+  present: number;
+  excusedAbsences: number;
+  unexcusedAbsences: number;
+  excusedTardiness: number;
+  unexcusedTardiness: number;
+  totalSessions: number;
+}
+
+export interface LBPSemesterFee {
+  semester: string;
+  chargesFees: number;
+  coursesTuition: number;
+  oldBalance: number;
+  oldBalanceConverted: number;
+  lbpCollection: number;
+  sponsorCollection: number;
+  scholarshipAmount: number;
+  adminDiscount: number;
+  remainingAmount: number;
+}
+
+export interface USDSemesterFee {
+  semester: string;
+  chargesFees: number;
+  usdTuition: number;
+  usdCollection: number;
+  usdSponsors: number;
+  scholarship: number;
+  remainingAmount: number;
 }
 
 export interface FinanceSummary {
-  totalTuition: number;
-  totalPaid: number;
-  balance: number;
-  scholarshipAmount: number;
-  nextPaymentDue: string;
-  nextPaymentAmount: number;
+  totalLbpRemaining: number;
+  totalUsdRemaining: number;
+  lbpFees: LBPSemesterFee[];
+  usdFees: USDSemesterFee[];
 }
 
 export interface CalendarEvent {

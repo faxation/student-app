@@ -17,7 +17,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useMoodle } from "@/lib/moodle-context";
 import {
   announcements as mockAnnouncements,
-  todayClasses,
+  weeklySchedule,
   assignments as mockAssignments,
   exams as mockExams,
   courses as mockCourses,
@@ -57,6 +57,10 @@ export default function HomePage() {
         .sort((a, b) => a.date.localeCompare(b.date))
         .slice(0, 4)
     : [];
+
+  // Today's classes from weekly schedule
+  const dayName = new Date().toLocaleDateString("en-US", { weekday: "long" });
+  const todayClasses = weeklySchedule[dayName] ?? [];
 
   const displayName = isSynced && moodle!.profile
     ? moodle!.profile.firstName
@@ -167,7 +171,7 @@ export default function HomePage() {
               ) : (
                 <p className="text-sm text-ink-400 py-4 text-center">No upcoming events</p>
               )
-            ) : (
+            ) : todayClasses.length > 0 ? (
               todayClasses.map((cls) => (
                 <div
                   key={cls.id}
@@ -179,11 +183,12 @@ export default function HomePage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-ink-900 truncate">{cls.courseName}</p>
-                    <p className="text-xs text-ink-500">{cls.courseCode} · {cls.room}</p>
+                    <p className="text-xs text-ink-500">{cls.courseCode}</p>
                   </div>
-                  <p className="text-xs text-ink-400 shrink-0">{cls.instructor}</p>
                 </div>
               ))
+            ) : (
+              <p className="text-sm text-ink-400 py-4 text-center">No classes today</p>
             )}
           </div>
         </Card>
