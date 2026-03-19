@@ -1,10 +1,10 @@
 /**
  * Normalized app domain types.
- * The UI consumes ONLY these types — never raw Moodle types.
+ * The UI consumes ONLY these types.
  * Each type has a `source` field to indicate data origin.
  */
 
-export type DataSource = "moodle" | "mock" | "manual";
+export type DataSource = "mock" | "manual";
 
 // ─── Student Profile ─────────────────────────────────────────────
 
@@ -75,7 +75,6 @@ export interface DomainExam {
   locationOrFormat: string;
   type: "midterm" | "final" | "quiz" | "exam";
   source: DataSource;
-  /** "high" if explicitly a quiz/exam module, "medium" if inferred from name */
   confidence: "high" | "medium" | "low";
 }
 
@@ -101,17 +100,4 @@ export interface DomainAnnouncement {
   publishedAt: string;
   link: string | null;
   source: DataSource;
-}
-
-// ─── Full Sync Payload ───────────────────────────────────────────
-
-export interface MoodleSyncData {
-  profile: DomainStudentProfile | null;
-  courses: DomainCourse[];
-  assignments: DomainAssignment[];
-  calendarEvents: DomainCalendarEvent[];
-  exams: DomainExam[];
-  announcements: DomainAnnouncement[];
-  syncedAt: string;
-  errors: string[];
 }

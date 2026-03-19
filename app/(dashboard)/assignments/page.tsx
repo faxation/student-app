@@ -1,11 +1,10 @@
 "use client";
 
-import { ClipboardList, Info, ExternalLink } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/ui/stat-card";
-import { useMoodle } from "@/lib/moodle-context";
 import { assignments as mockAssignments } from "@/data/mock-data";
 import { formatDate, daysUntil } from "@/lib/utils";
 
@@ -18,22 +17,14 @@ const statusConfig = {
 };
 
 export default function AssignmentsPage() {
-  const { data: moodle, isSynced } = useMoodle();
-
-  const assignments = isSynced
-    ? moodle!.assignments
-    : mockAssignments.map((a) => ({
-        ...a,
-        link: "",
-        source: "mock" as const,
-      }));
+  const assignments = mockAssignments;
 
   const pending = assignments.filter((a) => a.status === "pending");
   const submitted = assignments.filter((a) => a.status === "submitted");
   const late = assignments.filter((a) => a.status === "late");
 
   return (
-    <PageWrapper title="Assignments" subtitle={isSynced ? "Synced from Moodle" : "Track and manage your coursework"}>
+    <PageWrapper title="Assignments" subtitle="Track and manage your coursework">
       {/* Stats */}
       <div className="page-grid-3 mb-8">
         <StatCard
@@ -58,36 +49,6 @@ export default function AssignmentsPage() {
           accent="red"
         />
       </div>
-
-      {/* Integration note */}
-      {!isSynced && (
-        <div className="mb-6 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-          <Info size={18} className="mt-0.5 shrink-0 text-blue-500" />
-          <div>
-            <p className="text-sm font-medium text-blue-800">
-              Showing Demo Data
-            </p>
-            <p className="mt-0.5 text-sm text-blue-600">
-              Click &quot;Sync Moodle&quot; in the header to load your real assignments from Moodle.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {isSynced && (
-        <div className="mb-6 flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-          <Info size={18} className="mt-0.5 shrink-0 text-emerald-500" />
-          <div>
-            <p className="text-sm font-medium text-emerald-800">
-              Live Moodle Data
-            </p>
-            <p className="mt-0.5 text-sm text-emerald-600">
-              Showing {assignments.length} assignment{assignments.length !== 1 ? "s" : ""} from your Moodle courses.
-              Submission statuses are fetched in real-time.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Assignment List */}
       <Card>
@@ -119,21 +80,9 @@ export default function AssignmentsPage() {
                   className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 p-4 items-center transition-colors hover:bg-surface-50"
                 >
                   <div className="md:col-span-4">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-ink-900 truncate">
-                        {assignment.title}
-                      </p>
-                      {isSynced && "link" in assignment && assignment.link && (
-                        <a
-                          href={assignment.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="shrink-0 text-brand-500 hover:text-brand-600"
-                        >
-                          <ExternalLink size={12} />
-                        </a>
-                      )}
-                    </div>
+                    <p className="text-sm font-medium text-ink-900 truncate">
+                      {assignment.title}
+                    </p>
                     <p className="text-xs text-ink-500 mt-0.5 line-clamp-1 md:hidden">
                       {assignment.courseName}
                     </p>
@@ -164,9 +113,6 @@ export default function AssignmentsPage() {
                     )}
                     {assignment.status === "late" && (
                       <span className="text-sm text-red-600 font-medium">Overdue</span>
-                    )}
-                    {(assignment.status === "draft" || assignment.status === "unknown") && (
-                      <span className="text-sm text-ink-400">—</span>
                     )}
                   </div>
 

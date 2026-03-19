@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/lib/auth-context";
-import { MoodleProvider } from "@/lib/moodle-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,7 +16,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          <MoodleProvider>{children}</MoodleProvider>
+          {children}
         </AuthProvider>
       </body>
     </html>

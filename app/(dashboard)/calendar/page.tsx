@@ -13,7 +13,6 @@ import {
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useMoodle } from "@/lib/moodle-context";
 import { calendarEvents as mockCalendarEvents } from "@/data/mock-data";
 import { formatDate, daysUntil } from "@/lib/utils";
 
@@ -186,31 +185,20 @@ function DayIndicators({
 
 // ─── Main component ─────────────────────────────────────────────
 export default function CalendarPage() {
-  const { data: moodle, isSynced } = useMoodle();
-
   const todayStr = toDateStr(new Date());
   const [viewMode, setViewMode] = useState<"week" | "month">("week");
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [upcomingOpen, setUpcomingOpen] = useState(true);
 
   // ─── Normalize events ───────────────────────────────────────
-  const events: CalEvent[] = isSynced
-    ? moodle!.calendarEvents.map((e) => ({
-        id: e.id,
-        title: e.title,
-        date: e.date,
-        time: e.time,
-        type: e.type,
-        courseCode: e.relatedCourseCode,
-      }))
-    : mockCalendarEvents.map((e) => ({
-        id: e.id,
-        title: e.title,
-        date: e.date,
-        time: e.time ?? null,
-        type: e.type,
-        courseCode: e.courseCode ?? null,
-      }));
+  const events: CalEvent[] = mockCalendarEvents.map((e) => ({
+    id: e.id,
+    title: e.title,
+    date: e.date,
+    time: e.time ?? null,
+    type: e.type,
+    courseCode: e.courseCode ?? null,
+  }));
 
   // ─── Derived data ───────────────────────────────────────────
   const weekDays = getWeekContaining(selectedDate);
@@ -241,7 +229,7 @@ export default function CalendarPage() {
   return (
     <PageWrapper
       title="Calendar"
-      subtitle={isSynced ? "Synced from Moodle" : "Your academic schedule at a glance"}
+      subtitle="Your academic schedule at a glance"
     >
       {/* Calendar Card */}
       <Card className="mb-6">

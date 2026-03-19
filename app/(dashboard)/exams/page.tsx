@@ -1,10 +1,9 @@
 "use client";
 
-import { FileText, Clock, MapPin, Monitor, AlertTriangle, Info, ShieldAlert } from "lucide-react";
+import { FileText, Clock, MapPin, Monitor, AlertTriangle } from "lucide-react";
 import { PageWrapper } from "@/components/ui/page-wrapper";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useMoodle } from "@/lib/moodle-context";
 import { exams as mockExams } from "@/data/mock-data";
 import { formatDate, daysUntil, cn } from "@/lib/utils";
 
@@ -16,50 +15,13 @@ const typeConfig = {
 };
 
 export default function ExamsPage() {
-  const { data: moodle, isSynced } = useMoodle();
-
-  const exams = isSynced
-    ? moodle!.exams.map((e) => ({
-        id: e.id,
-        courseName: e.courseName,
-        courseCode: e.courseCode,
-        date: e.date,
-        time: e.time,
-        duration: e.duration,
-        room: e.locationOrFormat,
-        format: (e.locationOrFormat.toLowerCase().includes("online") ? "online" : "in-person") as "online" | "in-person",
-        type: e.type,
-        confidence: e.confidence,
-        source: e.source,
-      }))
-    : mockExams.map((e) => ({
-        ...e,
-        confidence: "high" as const,
-        source: "mock" as const,
-      }));
+  const exams = mockExams;
 
   const sortedExams = [...exams].sort((a, b) => a.date.localeCompare(b.date));
   const upcoming = sortedExams.filter((e) => daysUntil(e.date) >= 0);
 
   return (
-    <PageWrapper title="Exams" subtitle={isSynced ? "From Moodle calendar events" : "Upcoming examinations and quizzes"}>
-      {/* Moodle confidence notice */}
-      {isSynced && (
-        <div className="mb-6 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-          <ShieldAlert size={18} className="mt-0.5 shrink-0 text-blue-500" />
-          <div>
-            <p className="text-sm font-medium text-blue-800">
-              Exam Detection
-            </p>
-            <p className="mt-0.5 text-sm text-blue-600">
-              Exams are inferred from Moodle quiz modules and calendar events with exam-related keywords.
-              Items marked &quot;medium&quot; or &quot;low&quot; confidence may not be actual exams.
-              {exams.length === 0 && " No exam-like events were found in your Moodle calendar."}
-            </p>
-          </div>
-        </div>
-      )}
-
+    <PageWrapper title="Exams" subtitle="Upcoming examinations and quizzes">
       {/* Urgency banner */}
       {upcoming.length > 0 && (() => {
         const nearest = upcoming[0];
@@ -89,9 +51,7 @@ export default function ExamsPage() {
             <FileText size={40} className="text-ink-300 mb-4" />
             <h3 className="font-serif text-lg font-semibold text-ink-700">No Exams Found</h3>
             <p className="mt-1 max-w-sm text-sm text-ink-500">
-              {isSynced
-                ? "No quiz or exam events were detected in your Moodle calendar. They may appear closer to exam periods."
-                : "Sync with Moodle to check for upcoming exams."}
+              No upcoming exams scheduled at this time.
             </p>
           </div>
         </Card>
@@ -111,9 +71,6 @@ export default function ExamsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={config.variant}>{config.label}</Badge>
-                    {isSynced && "confidence" in exam && exam.confidence !== "high" && (
-                      <Badge variant="default">{exam.confidence} conf.</Badge>
-                    )}
                     {!isPast && days <= 3 && (
                       <Badge variant="danger">
                         {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days}d`}
