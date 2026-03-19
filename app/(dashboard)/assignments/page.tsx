@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { ClipboardList, ExternalLink, Loader2, ShieldAlert } from "lucide-react";
+import { ClipboardList, ChevronDown, ExternalLink, Loader2, ShieldAlert } from "lucide-react";
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,7 @@ const statusConfig = {
 };
 
 export default function AssignmentsPage() {
+  const [assignmentsOpen, setAssignmentsOpen] = useState(true);
   const assignments = mockAssignments;
 
   const pending = assignments.filter((a) => a.status === "pending");
@@ -53,84 +54,102 @@ export default function AssignmentsPage() {
         />
       </div>
 
-      {/* Assignment List */}
+      {/* Assignment List — Collapsible */}
       <Card>
-        <CardHeader title="All Assignments" subtitle={`${assignments.length} total`} />
+        <button
+          onClick={() => setAssignmentsOpen(!assignmentsOpen)}
+          className="flex w-full items-center justify-between"
+        >
+          <div>
+            <h3 className="font-serif text-lg font-semibold text-ink-900">All Assignments</h3>
+            <p className="mt-0.5 text-sm text-ink-500">{assignments.length} total</p>
+          </div>
+          <ChevronDown
+            size={20}
+            className={`text-ink-400 transition-transform duration-200 ${
+              assignmentsOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
 
-        {/* Table header */}
-        <div className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-2 text-xs font-medium text-ink-400 uppercase tracking-wider border-b border-surface-200">
-          <div className="col-span-4">Assignment</div>
-          <div className="col-span-2">Course</div>
-          <div className="col-span-2">Due Date</div>
-          <div className="col-span-2">Time Left</div>
-          <div className="col-span-2 text-right">Status</div>
-        </div>
-
-        {/* Rows */}
-        <div className="divide-y divide-surface-100">
-          {assignments.length === 0 ? (
-            <div className="p-8 text-center text-sm text-ink-400">
-              No assignments found.
+        {assignmentsOpen && (
+          <div className="mt-4">
+            {/* Table header */}
+            <div className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-2 text-xs font-medium text-ink-400 uppercase tracking-wider border-b border-surface-200">
+              <div className="col-span-4">Assignment</div>
+              <div className="col-span-2">Course</div>
+              <div className="col-span-2">Due Date</div>
+              <div className="col-span-2">Time Left</div>
+              <div className="col-span-2 text-right">Status</div>
             </div>
-          ) : (
-            assignments.map((assignment) => {
-              const days = assignment.dueDate ? daysUntil(assignment.dueDate) : 999;
-              const config = statusConfig[assignment.status] ?? statusConfig.unknown;
 
-              return (
-                <div
-                  key={assignment.id}
-                  className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 p-4 items-center transition-colors hover:bg-surface-50"
-                >
-                  <div className="md:col-span-4">
-                    <p className="text-sm font-medium text-ink-900 truncate">
-                      {assignment.title}
-                    </p>
-                    <p className="text-xs text-ink-500 mt-0.5 line-clamp-1 md:hidden">
-                      {assignment.courseName}
-                    </p>
-                  </div>
-
-                  <div className="hidden md:block md:col-span-2">
-                    <Badge variant="default">{assignment.courseCode}</Badge>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <p className="text-sm text-ink-600">
-                      {assignment.dueDate ? formatDate(assignment.dueDate) : "No due date"}
-                    </p>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    {assignment.status === "pending" && assignment.dueDate && (
-                      <span
-                        className={`text-sm font-medium ${
-                          days <= 1 ? "text-red-600" : days <= 3 ? "text-amber-600" : "text-ink-600"
-                        }`}
-                      >
-                        {days === 0 ? "Due today" : days === 1 ? "Due tomorrow" : days > 0 ? `${days} days` : "Overdue"}
-                      </span>
-                    )}
-                    {assignment.status === "submitted" && (
-                      <span className="text-sm text-ink-400">—</span>
-                    )}
-                    {assignment.status === "late" && (
-                      <span className="text-sm text-red-600 font-medium">Overdue</span>
-                    )}
-                  </div>
-
-                  <div className="md:col-span-2 md:text-right">
-                    <Badge variant={config.variant}>{config.label}</Badge>
-                  </div>
+            {/* Rows */}
+            <div className="divide-y divide-surface-100">
+              {assignments.length === 0 ? (
+                <div className="p-8 text-center text-sm text-ink-400">
+                  No assignments found.
                 </div>
-              );
-            })
-          )}
-        </div>
+              ) : (
+                assignments.map((assignment) => {
+                  const days = assignment.dueDate ? daysUntil(assignment.dueDate) : 999;
+                  const config = statusConfig[assignment.status] ?? statusConfig.unknown;
+
+                  return (
+                    <div
+                      key={assignment.id}
+                      className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 p-4 items-center transition-colors hover:bg-surface-50"
+                    >
+                      <div className="md:col-span-4">
+                        <p className="text-sm font-medium text-ink-900 truncate">
+                          {assignment.title}
+                        </p>
+                        <p className="text-xs text-ink-500 mt-0.5 line-clamp-1 md:hidden">
+                          {assignment.courseName}
+                        </p>
+                      </div>
+
+                      <div className="hidden md:block md:col-span-2">
+                        <Badge variant="default">{assignment.courseCode}</Badge>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <p className="text-sm text-ink-600">
+                          {assignment.dueDate ? formatDate(assignment.dueDate) : "No due date"}
+                        </p>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        {assignment.status === "pending" && assignment.dueDate && (
+                          <span
+                            className={`text-sm font-medium ${
+                              days <= 1 ? "text-red-600" : days <= 3 ? "text-amber-600" : "text-ink-600"
+                            }`}
+                          >
+                            {days === 0 ? "Due today" : days === 1 ? "Due tomorrow" : days > 0 ? `${days} days` : "Overdue"}
+                          </span>
+                        )}
+                        {assignment.status === "submitted" && (
+                          <span className="text-sm text-ink-400">—</span>
+                        )}
+                        {assignment.status === "late" && (
+                          <span className="text-sm text-red-600 font-medium">Overdue</span>
+                        )}
+                      </div>
+
+                      <div className="md:col-span-2 md:text-right">
+                        <Badge variant={config.variant}>{config.label}</Badge>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Pearson Portal */}
-      <PearsonPortalCard />
+      <PearsonPortalCard expanded={!assignmentsOpen} />
     </PageWrapper>
   );
 }
@@ -139,7 +158,7 @@ export default function AssignmentsPage() {
 
 type PortalState = "idle" | "loading" | "embedded" | "blocked";
 
-function PearsonPortalCard() {
+function PearsonPortalCard({ expanded }: { expanded: boolean }) {
   const [state, setState] = useState<PortalState>("idle");
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -218,7 +237,7 @@ function PearsonPortalCard() {
           className={`relative w-full overflow-hidden rounded-lg border border-surface-200 ${
             state === "loading" ? "h-0 opacity-0" : "opacity-100"
           }`}
-          style={state === "embedded" ? { height: "600px" } : undefined}
+          style={state === "embedded" ? { height: expanded ? "calc(100vh - 200px)" : "600px", minHeight: expanded ? "700px" : "600px" } : undefined}
         >
           <iframe
             ref={iframeRef}
