@@ -57,15 +57,40 @@ Create a completely new university student app for organizing:
 - All pages use realistic mock data
 - No backend, no external auth, no real integrations
 
+## Moodle Integration (v0.2)
+
+Implemented a first-pass Moodle integration using the **Moodle Web Services REST API** (`moodle_mobile_ws`).
+
+### What's connected:
+- **Authentication**: Token-based via `/login/token.php`
+- **Courses**: Enrolled courses with progress tracking
+- **Assignments**: Full list with real submission statuses (pending/submitted/late/draft)
+- **Calendar**: Action events (deadlines, quizzes, course events)
+- **Exams**: Inferred from quiz modules and exam-keyword calendar events
+
+### What's NOT connected:
+- **Finance**: Moodle has no financial data (needs SIS)
+- **Announcements**: Requires per-course forum fetching (future)
+- **Instructor names**: Not returned by course list API (future)
+- **GPA/Attendance**: Not available from Moodle (needs SIS)
+
+### Security:
+- Credentials stored in `.env.local` only (gitignored)
+- All Moodle calls are server-side (API route)
+- Token is transient, never persisted to disk
+
 ## Future Modules (Planned)
 
 - Absence report
 - Detailed financial report
-- Moodle integration
+- ~~Moodle integration~~ ✅ Implemented (v0.2)
 - Pearson integration
 - SIS integration
 - Notifications
 - Attendance analytics
+- Announcement extraction from Moodle forums
+- Instructor name resolution
+- localStorage persistence for sync data
 
 ## Technical Stack
 
@@ -75,14 +100,15 @@ Create a completely new university student app for organizing:
 - Tailwind CSS
 - lucide-react
 - Framer Motion (subtle polish)
-- Local mock data only
+- Moodle Web Services REST API (for data ingestion)
 
 ## Important Notes
 
 - Automatic 10-minute sync from this conversation into the repo is **not natively possible** without an external process or API bridge.
 - A local `sync:readme` script is provided to manually sync `docs/context-log.md` into `README.md`.
 - A GitHub Actions workflow example is provided for potential automation.
+- Moodle credentials must NEVER be committed to the repository.
 
 ---
 
-*Last updated: 2026-03-19 — Initial bootstrap*
+*Last updated: 2026-03-19 — Moodle integration (v0.2)*

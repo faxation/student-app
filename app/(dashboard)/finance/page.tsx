@@ -14,6 +14,7 @@ import { PageWrapper } from "@/components/ui/page-wrapper";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
+import { useMoodle } from "@/lib/moodle-context";
 import { financeSummary, transactions } from "@/data/mock-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -24,12 +25,24 @@ const txTypeConfig = {
 };
 
 export default function FinancePage() {
+  const { isSynced } = useMoodle();
   const paidPercent = Math.round(
     (financeSummary.totalPaid / financeSummary.totalTuition) * 100
   );
 
   return (
     <PageWrapper title="Finance" subtitle="Tuition, payments, and financial overview">
+      {/* Moodle notice */}
+      <div className="mb-6 flex items-start gap-3 rounded-lg border border-surface-200 bg-surface-50 p-4">
+        <HelpCircle size={18} className="mt-0.5 shrink-0 text-ink-400" />
+        <div>
+          <p className="text-sm font-medium text-ink-700">Finance is not sourced from Moodle</p>
+          <p className="mt-0.5 text-sm text-ink-500">
+            Moodle does not provide financial data. This page shows placeholder information.
+            Future versions may integrate with the university&apos;s SIS for real tuition data.
+          </p>
+        </div>
+      </div>
       {/* Overview Stats */}
       <div className="page-grid-4 mb-8">
         <StatCard

@@ -8,7 +8,7 @@ A modern, university-branded student dashboard for personal academic organizatio
 
 Student App is a clean, focused web application designed for university students to organize their academic life — schedules, assignments, exams, courses, and finances — in one polished interface.
 
-This is **not** a Moodle replacement. It is a completely new student experience layer that may eventually integrate with existing platforms (Moodle, Pearson, SIS) but presents information in a fundamentally better way.
+This is **not** a Moodle replacement. It is a completely new student experience layer that integrates with Moodle as a **data source** while presenting information in a fundamentally better way.
 
 ## Product Vision
 
@@ -16,18 +16,19 @@ Create a student-first dashboard that feels calm, formal, modern, and premium. E
 
 The interface draws visual identity from [ULS](https://www.uls.edu.lb/) — the same institutional tone, color family, and academic aesthetic, reinterpreted into a modern app UI.
 
-## Current Scope (v0.1)
+## Current Scope (v0.2)
 
-| Feature | Status |
-|---------|--------|
-| Login page | ✅ Demo credentials |
-| App shell with sidebar | ✅ Collapsible, hover-expand |
-| Home dashboard | ✅ Stats, classes, deadlines, announcements |
-| Calendar | ✅ Week view, event timeline |
-| Assignments | ✅ Status tracking, due dates |
-| Exams | ✅ Countdown, urgency indicators |
-| Courses | ✅ Enrollment, attendance, activity |
-| Finance | ✅ Tuition, payments, transactions |
+| Feature | Status | Data Source |
+|---------|--------|-------------|
+| Login page | ✅ Demo credentials | Local |
+| App shell with sidebar | ✅ Collapsible, hover-expand | — |
+| Moodle sync | ✅ One-click sync button | Moodle REST API |
+| Home dashboard | ✅ Stats, events, deadlines | Moodle + mock fallback |
+| Calendar | ✅ Week view, event timeline | Moodle + mock fallback |
+| Assignments | ✅ Status tracking, due dates | Moodle + mock fallback |
+| Exams | ✅ Inferred from quizzes/events | Moodle (heuristic) |
+| Courses | ✅ Enrollment, progress | Moodle + mock fallback |
+| Finance | ✅ Tuition, payments (placeholder) | Mock only (not in Moodle) |
 
 ## Tech Stack
 
@@ -36,7 +37,7 @@ The interface draws visual identity from [ULS](https://www.uls.edu.lb/) — the 
 - **Styling**: Tailwind CSS
 - **Icons**: lucide-react
 - **Animation**: Framer Motion
-- **Data**: Local mock data (no backend)
+- **Data**: Moodle Web Services REST API + local mock data fallback
 
 ## Demo Credentials
 
@@ -97,16 +98,27 @@ Student App/
 │       ├── stat-card.tsx       # Metric display cards
 │       ├── page-wrapper.tsx    # Standard page layout
 │       └── empty-state.tsx     # Empty state placeholder
+├── integrations/
+│   └── moodle/
+│       ├── types.ts            # Raw Moodle API response types
+│       ├── auth.ts             # Token acquisition
+│       ├── client.ts           # REST API client
+│       ├── fetchers.ts         # Data fetchers
+│       ├── mappers.ts          # Moodle → domain type mappers
+│       └── index.ts            # Public API + sync orchestrator
 ├── lib/
-│   ├── types.ts                # TypeScript interfaces
-│   ├── auth-context.tsx        # Authentication context
+│   ├── types.ts                # TypeScript interfaces (original)
+│   ├── domain/types.ts         # Normalized domain models
+│   ├── auth-context.tsx        # App authentication context
+│   ├── moodle-context.tsx      # Moodle sync state context
 │   └── utils.ts                # Utility functions
 ├── data/
-│   └── mock-data.ts            # All mock data (typed)
+│   └── mock-data.ts            # All mock data (typed, fallback)
 ├── docs/
 │   ├── context-log.md          # Project context source of truth
 │   ├── product-brief.md        # Product direction document
-│   └── design-system.md        # Design system documentation
+│   ├── design-system.md        # Design system documentation
+│   └── moodle-integration.md   # Moodle integration docs
 ├── scripts/
 │   └── sync-readme-context.mjs # README context sync script
 ├── .github/
@@ -121,6 +133,10 @@ Student App/
 # Install dependencies
 npm install
 
+# Configure Moodle credentials (required for live data)
+cp .env.example .env.local
+# Edit .env.local with your real Moodle credentials
+
 # Start development server
 npm run dev
 
@@ -132,6 +148,16 @@ npm run sync:readme
 ```
 
 The app will be available at `http://localhost:3000`.
+
+### Moodle Integration
+
+1. Copy `.env.example` to `.env.local` and fill in your Moodle credentials
+2. Start the dev server with `npm run dev`
+3. Log in with the demo credentials
+4. Click **"Sync Moodle"** in the top-right header
+5. Your real courses, assignments, and calendar events will replace the demo data
+
+See [docs/moodle-integration.md](docs/moodle-integration.md) for full details.
 
 ## Mock Data
 
@@ -209,7 +235,7 @@ Automatic 10-minute sync from an external conversation is **not natively possibl
 
 <!-- CONTEXT_LOG_START -->
 <!-- This section is auto-synced from docs/context-log.md -->
-<!-- Last synced: 2026-03-19T20:29:46.475Z -->
+<!-- Last synced: 2026-03-19T20:58:25.125Z -->
 
 # Context Log
 
@@ -270,15 +296,40 @@ Create a completely new university student app for organizing:
 - All pages use realistic mock data
 - No backend, no external auth, no real integrations
 
+## Moodle Integration (v0.2)
+
+Implemented a first-pass Moodle integration using the **Moodle Web Services REST API** (`moodle_mobile_ws`).
+
+### What's connected:
+- **Authentication**: Token-based via `/login/token.php`
+- **Courses**: Enrolled courses with progress tracking
+- **Assignments**: Full list with real submission statuses (pending/submitted/late/draft)
+- **Calendar**: Action events (deadlines, quizzes, course events)
+- **Exams**: Inferred from quiz modules and exam-keyword calendar events
+
+### What's NOT connected:
+- **Finance**: Moodle has no financial data (needs SIS)
+- **Announcements**: Requires per-course forum fetching (future)
+- **Instructor names**: Not returned by course list API (future)
+- **GPA/Attendance**: Not available from Moodle (needs SIS)
+
+### Security:
+- Credentials stored in `.env.local` only (gitignored)
+- All Moodle calls are server-side (API route)
+- Token is transient, never persisted to disk
+
 ## Future Modules (Planned)
 
 - Absence report
 - Detailed financial report
-- Moodle integration
+- ~~Moodle integration~~ ✅ Implemented (v0.2)
 - Pearson integration
 - SIS integration
 - Notifications
 - Attendance analytics
+- Announcement extraction from Moodle forums
+- Instructor name resolution
+- localStorage persistence for sync data
 
 ## Technical Stack
 
@@ -288,17 +339,18 @@ Create a completely new university student app for organizing:
 - Tailwind CSS
 - lucide-react
 - Framer Motion (subtle polish)
-- Local mock data only
+- Moodle Web Services REST API (for data ingestion)
 
 ## Important Notes
 
 - Automatic 10-minute sync from this conversation into the repo is **not natively possible** without an external process or API bridge.
 - A local `sync:readme` script is provided to manually sync `docs/context-log.md` into `README.md`.
 - A GitHub Actions workflow example is provided for potential automation.
+- Moodle credentials must NEVER be committed to the repository.
 
 ---
 
-*Last updated: 2026-03-19 — Initial bootstrap*
+*Last updated: 2026-03-19 — Moodle integration (v0.2)*
 <!-- CONTEXT_LOG_END -->
 
 ---
