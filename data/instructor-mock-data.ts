@@ -1,0 +1,261 @@
+import type {
+  InstructorProfile,
+  InstructorCourse,
+  InstructorSection,
+  InstructorAssignment,
+  InstructorExam,
+  SectionStudent,
+} from "@/lib/instructor-types";
+
+// ─── Credentials ────────────────────────────────────────────────
+export const INSTRUCTOR_CREDENTIALS = {
+  username: "Adam",
+  password: "Act3and4",
+};
+
+// ─── Profile ────────────────────────────────────────────────────
+export const instructorProfile: InstructorProfile = {
+  id: "inst-1",
+  firstName: "Adam",
+  lastName: "Mitchell",
+  email: "adam.mitchell@uls.edu",
+  instructorId: "INST-2024-001",
+  department: "Computer Science",
+  title: "Associate Professor",
+  avatarInitials: "AM",
+};
+
+// ─── Courses ────────────────────────────────────────────────────
+export const instructorCourses: InstructorCourse[] = [
+  {
+    id: "ic1",
+    code: "CSC 301",
+    name: "Data Structures & Algorithms",
+    term: "Spring 2026",
+    credits: 3,
+    sectionCount: 2,
+  },
+  {
+    id: "ic2",
+    code: "CSC 415",
+    name: "Database Systems",
+    term: "Spring 2026",
+    credits: 3,
+    sectionCount: 2,
+  },
+  {
+    id: "ic3",
+    code: "CSC 210",
+    name: "Object-Oriented Programming",
+    term: "Spring 2026",
+    credits: 3,
+    sectionCount: 1,
+  },
+];
+
+// ─── Sections ───────────────────────────────────────────────────
+export const instructorSections: InstructorSection[] = [
+  {
+    id: "is1",
+    courseId: "ic1",
+    courseCode: "CSC 301",
+    courseName: "Data Structures & Algorithms",
+    label: "Section A",
+    meetingTime: "MWF 9:00 – 10:15",
+    enrolledCount: 32,
+  },
+  {
+    id: "is2",
+    courseId: "ic1",
+    courseCode: "CSC 301",
+    courseName: "Data Structures & Algorithms",
+    label: "Section B",
+    meetingTime: "MWF 11:00 – 12:15",
+    enrolledCount: 28,
+  },
+  {
+    id: "is3",
+    courseId: "ic2",
+    courseCode: "CSC 415",
+    courseName: "Database Systems",
+    label: "Section A",
+    meetingTime: "TTh 10:00 – 11:30",
+    enrolledCount: 35,
+  },
+  {
+    id: "is4",
+    courseId: "ic2",
+    courseCode: "CSC 415",
+    courseName: "Database Systems",
+    label: "Section B",
+    meetingTime: "TTh 14:00 – 15:30",
+    enrolledCount: 30,
+  },
+  {
+    id: "is5",
+    courseId: "ic3",
+    courseCode: "CSC 210",
+    courseName: "Object-Oriented Programming",
+    label: "Section A",
+    meetingTime: "MWF 14:00 – 15:15",
+    enrolledCount: 40,
+  },
+];
+
+// ─── Assignments ────────────────────────────────────────────────
+export const instructorAssignments: InstructorAssignment[] = [
+  {
+    id: "ia1",
+    title: "Binary Search Tree Implementation",
+    courseId: "ic1",
+    courseCode: "CSC 301",
+    courseName: "Data Structures & Algorithms",
+    sectionId: "is1",
+    sectionLabel: "Section A",
+    dueDate: "2026-04-05",
+    weight: 15,
+    hasFile: true,
+    status: "published",
+  },
+  {
+    id: "ia2",
+    title: "Graph Traversal Lab",
+    courseId: "ic1",
+    courseCode: "CSC 301",
+    courseName: "Data Structures & Algorithms",
+    sectionId: "is2",
+    sectionLabel: "Section B",
+    dueDate: "2026-04-08",
+    weight: 10,
+    hasFile: true,
+    status: "published",
+  },
+  {
+    id: "ia3",
+    title: "SQL Joins Practice",
+    courseId: "ic2",
+    courseCode: "CSC 415",
+    courseName: "Database Systems",
+    sectionId: "is3",
+    sectionLabel: "Section A",
+    dueDate: "2026-03-28",
+    weight: 10,
+    hasFile: false,
+    status: "published",
+  },
+  {
+    id: "ia4",
+    title: "ER Diagram Project",
+    courseId: "ic2",
+    courseCode: "CSC 415",
+    courseName: "Database Systems",
+    sectionId: "is4",
+    sectionLabel: "Section B",
+    dueDate: "2026-04-15",
+    weight: 20,
+    hasFile: true,
+    status: "draft",
+  },
+  {
+    id: "ia5",
+    title: "Inheritance Patterns Exercise",
+    courseId: "ic3",
+    courseCode: "CSC 210",
+    courseName: "Object-Oriented Programming",
+    sectionId: "is5",
+    sectionLabel: "Section A",
+    dueDate: "2026-04-01",
+    weight: 12,
+    hasFile: true,
+    status: "published",
+  },
+];
+
+// ─── Exams ──────────────────────────────────────────────────────
+export const instructorExams: InstructorExam[] = [
+  {
+    id: "ie1",
+    title: "Midterm Exam – Data Structures",
+    courseId: "ic1",
+    courseCode: "CSC 301",
+    courseName: "Data Structures & Algorithms",
+    sectionId: "is1",
+    sectionLabel: "Section A",
+    hasFile: true,
+    fileType: "PDF",
+    createdDate: "2026-03-10",
+  },
+  {
+    id: "ie2",
+    title: "Midterm Exam – Database Systems",
+    courseId: "ic2",
+    courseCode: "CSC 415",
+    courseName: "Database Systems",
+    sectionId: "is3",
+    sectionLabel: "Section A",
+    hasFile: true,
+    fileType: "PDF",
+    createdDate: "2026-03-12",
+  },
+  {
+    id: "ie3",
+    title: "Quiz 2 – OOP Patterns",
+    courseId: "ic3",
+    courseCode: "CSC 210",
+    courseName: "Object-Oriented Programming",
+    sectionId: "is5",
+    sectionLabel: "Section A",
+    hasFile: true,
+    fileType: "DOCX",
+    createdDate: "2026-03-15",
+  },
+];
+
+// ─── Section Rosters (for grades) ───────────────────────────────
+export const sectionRosters: Record<string, SectionStudent[]> = {
+  is1: [
+    { id: "s1", name: "Farid Sleimen Rahme", studentId: "202300189" },
+    { id: "s2", name: "Lara Haddad", studentId: "202300245" },
+    { id: "s3", name: "Omar Khoury", studentId: "202300312" },
+    { id: "s4", name: "Nour El Dine", studentId: "202300178" },
+    { id: "s5", name: "Karim Nassar", studentId: "202300290" },
+    { id: "s6", name: "Maya Abi Nader", studentId: "202300156" },
+    { id: "s7", name: "Rami Saleh", studentId: "202300401" },
+  ],
+  is2: [
+    { id: "s8", name: "Sara Baroudi", studentId: "202300220" },
+    { id: "s9", name: "Ali Hamdan", studentId: "202300335" },
+    { id: "s10", name: "Tala Fakhri", studentId: "202300198" },
+    { id: "s11", name: "Jad Moussawi", studentId: "202300267" },
+    { id: "s12", name: "Hana Bazzi", studentId: "202300143" },
+    { id: "s13", name: "Youssef Aoun", studentId: "202300389" },
+  ],
+  is3: [
+    { id: "s14", name: "Leen Saab", studentId: "202300210" },
+    { id: "s15", name: "Ziad Khalil", studentId: "202300355" },
+    { id: "s16", name: "Nadia Traboulsi", studentId: "202300176" },
+    { id: "s17", name: "Sami Geagea", studentId: "202300299" },
+    { id: "s18", name: "Rita Frem", studentId: "202300134" },
+    { id: "s19", name: "Walid Hanna", studentId: "202300412" },
+    { id: "s20", name: "Diana Chalouhi", studentId: "202300258" },
+    { id: "s21", name: "Elie Boustani", studentId: "202300321" },
+  ],
+  is4: [
+    { id: "s22", name: "Layal Makhlouf", studentId: "202300187" },
+    { id: "s23", name: "Ahmad Darwish", studentId: "202300303" },
+    { id: "s24", name: "Perla Assaf", studentId: "202300241" },
+    { id: "s25", name: "Hussein Itani", studentId: "202300369" },
+    { id: "s26", name: "Christina Naim", studentId: "202300152" },
+    { id: "s27", name: "Tarek Abdallah", studentId: "202300278" },
+  ],
+  is5: [
+    { id: "s28", name: "Yasmine Harb", studentId: "202300195" },
+    { id: "s29", name: "Marc Azar", studentId: "202300347" },
+    { id: "s30", name: "Dina Obeid", studentId: "202300223" },
+    { id: "s31", name: "Fadi Rahal", studentId: "202300168" },
+    { id: "s32", name: "Rania Sfeir", studentId: "202300286" },
+    { id: "s33", name: "Charbel Daou", studentId: "202300410" },
+    { id: "s34", name: "Joelle Kanaan", studentId: "202300137" },
+    { id: "s35", name: "Bilal Tabbara", studentId: "202300394" },
+  ],
+};
