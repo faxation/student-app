@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { BookOpen, Users, Clock, Activity, BarChart3 } from "lucide-react";
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import { Card } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { courses as mockCourses } from "@/data/mock-data";
 
 export default function CoursesPage() {
+  const router = useRouter();
   const courses = mockCourses;
 
   return (
@@ -42,7 +44,12 @@ export default function CoursesPage() {
           const attendancePct = Math.round((course.attendance.present / course.attendance.total) * 100);
 
           return (
-            <Card key={course.id} hover>
+            <Card
+              key={course.id}
+              hover
+              className="cursor-pointer"
+              onClick={() => router.push(`/courses/${course.id}`)}
+            >
               <div className="flex items-start justify-between mb-4">
                 <div className="min-w-0 flex-1">
                   <h3 className="font-serif text-lg font-semibold text-ink-900 truncate">

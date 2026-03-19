@@ -130,3 +130,38 @@ export interface QuickStat {
   change?: string;
   icon: string;
 }
+
+// ─── Course Detail Types ────────────────────────────────────────
+export interface CourseMaterial {
+  id: string;
+  category: "syllabus" | "chapter" | "slides" | "assignment" | "reading" | "notes";
+  title: string;
+  description?: string;
+  fileType?: string;
+  date?: string;
+}
+
+export interface CourseParticipant {
+  id: string;
+  name: string;
+  role: "Instructor" | "Student";
+  email: string;
+  initials: string;
+}
+
+export interface GradeItem {
+  id: string;
+  title: string;
+  earnedScore: number;
+  maxScore: number;
+  weight: number;
+}
+
+export interface CourseDetail {
+  courseId: string;
+  materials: CourseMaterial[];
+  participants: CourseParticipant[];
+  grades: GradeItem[];
+  totalGrade: number;
+  letterGrade: string;
+}
