@@ -6,6 +6,7 @@ import { InstructorPageWrapper } from "@/components/instructor/page-wrapper";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { useApi } from "@/lib/use-api";
+import { getLetterGrade } from "@/lib/grade-utils";
 
 interface Section {
   id: string;
@@ -204,47 +205,67 @@ export default function InstructorGradesPage() {
           {/* Table header */}
           <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-medium text-ink-400 uppercase tracking-wider border-b border-surface-200">
             <div className="col-span-1">#</div>
-            <div className="col-span-3">Student ID</div>
-            <div className="col-span-5">Student Name</div>
+            <div className="col-span-2">Student ID</div>
+            <div className="col-span-4">Student Name</div>
             <div className="col-span-3 text-right">Grade</div>
+            <div className="col-span-2 text-right">Letter Grade</div>
           </div>
 
           {/* Student Rows */}
           <div className="divide-y divide-surface-100">
-            {students.map((student, index) => (
-              <div
-                key={student.id}
-                className="grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors hover:bg-surface-50"
-              >
-                <div className="col-span-1">
-                  <span className="text-sm text-ink-400">{index + 1}</span>
-                </div>
+            {students.map((student, index) => {
+              const rawValue = currentGrades[student.id] ?? (student.currentGrade != null ? String(student.currentGrade) : "");
+              const numericValue = rawValue.trim() !== "" ? Number(rawValue) : null;
+              const letter = numericValue != null && !isNaN(numericValue) ? getLetterGrade(numericValue) : "";
 
-                <div className="col-span-3">
-                  <span className="text-sm font-mono text-ink-600">
-                    {student.studentNumber}
-                  </span>
-                </div>
+              return (
+                <div
+                  key={student.id}
+                  className="grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors hover:bg-surface-50"
+                >
+                  <div className="col-span-1">
+                    <span className="text-sm text-ink-400">{index + 1}</span>
+                  </div>
 
-                <div className="col-span-5">
-                  <span className="text-sm font-medium text-ink-900">
-                    {student.name}
-                  </span>
-                </div>
+                  <div className="col-span-2">
+                    <span className="text-sm font-mono text-ink-600">
+                      {student.studentNumber}
+                    </span>
+                  </div>
 
-                <div className="col-span-3 flex justify-end">
-                  <input
-                    type="text"
-                    value={currentGrades[student.id] ?? (student.currentGrade != null ? String(student.currentGrade) : "")}
-                    onChange={(e) =>
-                      handleGradeChange(student.id, e.target.value)
-                    }
-                    placeholder="—"
-                    className="w-24 rounded-lg border border-surface-300 bg-white px-3 py-1.5 text-center text-sm text-ink-900 placeholder:text-ink-300 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                  />
+                  <div className="col-span-4">
+                    <span className="text-sm font-medium text-ink-900">
+                      {student.name}
+                    </span>
+                  </div>
+
+                  <div className="col-span-3 flex justify-end">
+                    <input
+                      type="text"
+                      value={rawValue}
+                      onChange={(e) =>
+                        handleGradeChange(student.id, e.target.value)
+                      }
+                      placeholder="—"
+                      className="w-24 rounded-lg border border-surface-300 bg-white px-3 py-1.5 text-center text-sm text-ink-900 placeholder:text-ink-300 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    />
+                  </div>
+
+                  <div className="col-span-2 flex justify-end">
+                    <span className={`inline-flex h-8 w-10 items-center justify-center rounded-lg text-sm font-semibold ${
+                      letter === "A" ? "bg-emerald-50 text-emerald-700"
+                        : letter === "B" ? "bg-blue-50 text-blue-700"
+                        : letter === "C" ? "bg-amber-50 text-amber-700"
+                        : letter === "D" ? "bg-orange-50 text-orange-700"
+                        : letter === "F" ? "bg-red-50 text-red-700"
+                        : "text-ink-300"
+                    }`}>
+                      {letter || "—"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Save Button */}
