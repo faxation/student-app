@@ -3,36 +3,48 @@ import { prisma } from "@/lib/server/db";
 import { requireInstructor } from "@/lib/server/auth/guards";
 import { validateTotalWeight } from "@/lib/server/services/grades";
 import { createAuditLog } from "@/lib/server/services/audit";
+import { DEV_INSTRUCTOR_EXAMS } from "@/lib/server/dev-instructor-data";
 
 export async function GET() {
   const { session, error } = await requireInstructor();
   if (error) return error;
   const ip = session!.user.instructorProfile!;
 
-  const exams = await prisma.exam.findMany({
-    where: { createdById: ip.id, deletedAt: null },
-    include: {
-      course: { select: { code: true, name: true } },
-      sections: { include: { section: { select: { id: true, sectionCode: true } } } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    const exams = await prisma.exam.findMany({
+      where: { createdById: ip.id, deletedAt: null },
+      include: {
+        course: { select: { code: true, name: true } },
+        sections: { include: { section: { select: { id: true, sectionCode: true } } } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-  return NextResponse.json({
-    exams: exams.map(e => ({
-      id: e.id,
-      title: e.title,
-      courseId: e.courseId,
-      courseCode: e.course.code,
-      courseName: e.course.name,
-      sectionId: e.sections[0]?.section.id ?? "",
-      sectionLabel: e.sections[0] ? `Section ${e.sections[0].section.sectionCode}` : "",
-      hasFile: false,
-      fileType: "",
-      createdDate: e.createdAt.toISOString().split("T")[0],
-      status: e.status.toLowerCase(),
-    })),
-  });
+    return NextResponse.json({
+      exams: exams.map(e => ({
+        id: e.id,
+        title: e.title,
+        courseId: e.courseId,
+        courseCode: e.course.code,
+        courseName: e.course.name,
+        sectionId: e.sections[0]?.section.id ?? "",
+        sectionNumber: e.sections[0]?.section.sectionCode ?? "",
+        sectionLabel: e.sections[0] ? `Section ${e.sections[0].section.sectionCode}` : "",
+        date: e.examDate?.toISOString().split("T")[0] ?? "",
+        startTime: e.startTime ?? "",
+        endTime: e.endTime ?? "",
+        location: e.room ?? "",
+        weight: Number(e.weightPercent),
+        type: e.examNumberLabel?.toLowerCase().includes("quiz") ? "quiz" : "midterm",
+        hasFile: false,
+        fileType: "",
+        createdDate: e.createdAt.toISOString().split("T")[0],
+        status: e.status.toLowerCase(),
+      })),
+    });
+  } catch {
+    return NextResponse.json(DEV_INSTRUCTOR_EXAMS);
+  }
 }
 
 export async function POST(request: NextRequest) {

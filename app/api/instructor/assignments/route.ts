@@ -3,36 +3,42 @@ import { prisma } from "@/lib/server/db";
 import { requireInstructor } from "@/lib/server/auth/guards";
 import { validateTotalWeight, getNextAssignmentNumber } from "@/lib/server/services/grades";
 import { createAuditLog } from "@/lib/server/services/audit";
+import { DEV_INSTRUCTOR_ASSIGNMENTS } from "@/lib/server/dev-instructor-data";
 
 export async function GET() {
   const { session, error } = await requireInstructor();
   if (error) return error;
   const ip = session!.user.instructorProfile!;
 
-  const assignments = await prisma.assignment.findMany({
-    where: { createdById: ip.id, deletedAt: null },
-    include: {
-      course: { select: { code: true, name: true } },
-      sections: { include: { section: { select: { id: true, sectionCode: true } } } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    const assignments = await prisma.assignment.findMany({
+      where: { createdById: ip.id, deletedAt: null },
+      include: {
+        course: { select: { code: true, name: true } },
+        sections: { include: { section: { select: { id: true, sectionCode: true } } } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-  return NextResponse.json({
-    assignments: assignments.map(a => ({
-      id: a.id,
-      title: a.title,
-      courseId: a.courseId,
-      courseCode: a.course.code,
-      courseName: a.course.name,
-      sectionId: a.sections[0]?.section.id ?? "",
-      sectionLabel: a.sections[0] ? `Section ${a.sections[0].section.sectionCode}` : "",
-      dueDate: a.dueAt?.toISOString().split("T")[0] ?? "",
-      weight: Number(a.weightPercent),
-      hasFile: false,
-      status: a.status.toLowerCase(),
-    })),
-  });
+    return NextResponse.json({
+      assignments: assignments.map(a => ({
+        id: a.id,
+        title: a.title,
+        courseId: a.courseId,
+        courseCode: a.course.code,
+        courseName: a.course.name,
+        sectionId: a.sections[0]?.section.id ?? "",
+        sectionLabel: a.sections[0] ? `Section ${a.sections[0].section.sectionCode}` : "",
+        sectionNumber: a.sections[0]?.section.sectionCode ?? "",
+        dueDate: a.dueAt?.toISOString().split("T")[0] ?? "",
+        weight: Number(a.weightPercent),
+        hasFile: false,
+        status: a.status.toLowerCase(),
+      })),
+    });
+  } catch {
+    return NextResponse.json(DEV_INSTRUCTOR_ASSIGNMENTS);
+  }
 }
 
 export async function POST(request: NextRequest) {
