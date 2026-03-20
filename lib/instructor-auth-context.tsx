@@ -8,30 +8,19 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import {
-  INSTRUCTOR_CREDENTIALS,
-  instructorProfile,
-} from "@/data/instructor-mock-data";
 import type { InstructorProfile } from "@/lib/instructor-types";
-
-const SESSION_KEY = "instructor-app-auth";
 
 interface InstructorAuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   instructor: InstructorProfile | null;
-  login: (username: string, password: string) => boolean;
-  logout: () => void;
+  login: (username: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
 }
 
 const InstructorAuthContext = createContext<InstructorAuthState | undefined>(
   undefined
 );
-
-function getStoredAuth(): boolean {
-  if (typeof window === "undefined") return false;
-  return sessionStorage.getItem(SESSION_KEY) === "true";
-}
 
 export function InstructorAuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -39,33 +28,44 @@ export function InstructorAuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (getStoredAuth()) {
-      setIsAuthenticated(true);
-      setInstructor(instructorProfile);
-    }
-    setIsLoading(false);
+    fetch("/api/instructor/auth/session")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.user) {
+          setIsAuthenticated(true);
+          setInstructor(data.user);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   }, []);
 
   const login = useCallback(
-    (username: string, password: string): boolean => {
-      if (
-        username === INSTRUCTOR_CREDENTIALS.username &&
-        password === INSTRUCTOR_CREDENTIALS.password
-      ) {
-        setIsAuthenticated(true);
-        setInstructor(instructorProfile);
-        sessionStorage.setItem(SESSION_KEY, "true");
-        return true;
+    async (username: string, password: string): Promise<boolean> => {
+      try {
+        const res = await fetch("/api/instructor/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (res.ok && data.user) {
+          setIsAuthenticated(true);
+          setInstructor(data.user);
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
       }
-      return false;
     },
     []
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await fetch("/api/instructor/auth/logout", { method: "POST" }).catch(() => {});
     setIsAuthenticated(false);
     setInstructor(null);
-    sessionStorage.removeItem(SESSION_KEY);
   }, []);
 
   return (

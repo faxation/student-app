@@ -18,45 +18,75 @@ The interface draws visual identity from [ULS](https://www.uls.edu.lb/) — the 
 
 | Feature | Status | Data Source |
 |---------|--------|-------------|
-| Login page | ✅ Demo credentials | Local |
+| Student login | ✅ Session-based auth | PostgreSQL |
+| Instructor login | ✅ Session-based auth | PostgreSQL |
 | App shell with sidebar | ✅ Collapsible, hover-expand | — |
-| Home dashboard | ✅ Stats, events, deadlines | Mock data |
-| Calendar | ✅ Week view, event timeline | Mock data |
-| Assignments | ✅ Status tracking, due dates | Mock data |
-| Exams | ✅ Schedule with countdown | Mock data |
-| Courses | ✅ Enrollment, attendance | Mock data |
-| Finance | ✅ Tuition, payments | Mock data |
-| Attendance | ✅ Per-course tracking | Mock data |
+| Home dashboard | ✅ Stats, events, deadlines | API |
+| Calendar | ✅ Week view, event timeline | API |
+| Assignments | ✅ Status tracking, due dates | API |
+| Exams | ✅ Schedule with countdown | API |
+| Courses | ✅ Enrollment, materials, grades | API |
+| Finance | ✅ Tuition, payments (USD + LBP) | API |
+| Attendance | ✅ Per-course tracking, AW logic | API |
+| Instructor courses | ✅ Course and section management | API |
+| Instructor assignments | ✅ Create, publish, archive | API |
+| Instructor exams | ✅ Create, publish, archive | API |
+| Instructor grades | ✅ Roster view, bulk save, publish | API |
 
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router)
 - **Language**: TypeScript
+- **Database**: PostgreSQL + Prisma ORM
+- **Auth**: Session-based (HTTP-only cookies, 5-min sliding window)
 - **Styling**: Tailwind CSS
 - **Icons**: lucide-react
 - **Animation**: Framer Motion
-- **Data**: Local mock data
+- **Validation**: Zod
+- **Password hashing**: bcryptjs
 
 ## Demo Credentials
 
+### Student
 | Field | Value |
 |-------|-------|
 | Student ID | `202300189` |
 | Password | `std175593` |
 
-> These are hardcoded demo credentials. No real authentication is performed.
+### Instructor
+| Field | Value |
+|-------|-------|
+| Username | `Adam` |
+| Password | `Act3and4` |
+
+> Credentials are stored in the database (hashed). Auth uses server-side sessions with HTTP-only cookies.
 
 ## Routes / Pages
 
+### Student
+
 | Route | Description |
 |-------|-------------|
-| `/login` | Login page |
-| `/home` | Student dashboard with quick stats and today's overview |
+| `/login` | Student login page |
+| `/home` | Dashboard with quick stats and today's overview |
 | `/calendar` | Weekly schedule and upcoming events |
 | `/assignments` | Assignment tracker with status indicators |
 | `/exams` | Exam schedule with urgency and countdown |
 | `/courses` | Enrolled courses with attendance and activity |
-| `/finance` | Tuition overview, payment progress, transactions |
+| `/courses/[courseId]` | Course detail: materials, participants, grades |
+| `/finance` | Tuition overview, payments, dual currency (USD/LBP) |
+| `/attendance` | Per-course attendance tracking with warning levels |
+
+### Instructor
+
+| Route | Description |
+|-------|-------------|
+| `/instructor/login` | Instructor login page |
+| `/instructor/courses` | Assigned courses with section details |
+| `/instructor/sections` | All sections with meeting times, enrollment |
+| `/instructor/assignments` | Assignment management with create form |
+| `/instructor/exams` | Exam management with create form |
+| `/instructor/grades` | Grade entry: select section → view roster → enter grades |
 
 ## Design Direction
 
@@ -73,114 +103,144 @@ See [docs/design-system.md](docs/design-system.md) for the complete design syste
 ```
 Student App/
 ├── app/
-│   ├── layout.tsx              # Root layout with AuthProvider
-│   ├── page.tsx                # Root redirect
-│   ├── globals.css             # Global styles + Tailwind
-│   ├── login/page.tsx          # Login page
-│   └── (dashboard)/
-│       ├── layout.tsx          # Dashboard shell with sidebar
-│       ├── home/page.tsx
-│       ├── calendar/page.tsx
-│       ├── assignments/page.tsx
-│       ├── exams/page.tsx
-│       ├── courses/page.tsx
-│       └── finance/page.tsx
+│   ├── layout.tsx                  # Root layout with AuthProvider
+│   ├── page.tsx                    # Root redirect
+│   ├── globals.css                 # Global styles + Tailwind
+│   ├── login/page.tsx              # Student login
+│   ├── (dashboard)/                # Student dashboard (auth-guarded)
+│   │   ├── layout.tsx
+│   │   ├── home/page.tsx
+│   │   ├── calendar/page.tsx
+│   │   ├── assignments/page.tsx
+│   │   ├── exams/page.tsx
+│   │   ├── courses/page.tsx
+│   │   ├── courses/[courseId]/page.tsx
+│   │   ├── finance/page.tsx
+│   │   └── attendance/page.tsx
+│   ├── instructor/
+│   │   ├── layout.tsx              # InstructorAuthProvider
+│   │   ├── login/page.tsx          # Instructor login
+│   │   └── (dashboard)/            # Instructor dashboard (auth-guarded)
+│   │       ├── courses/page.tsx
+│   │       ├── sections/page.tsx
+│   │       ├── assignments/page.tsx
+│   │       ├── exams/page.tsx
+│   │       └── grades/page.tsx
+│   └── api/
+│       ├── student/                # ~15 student API routes
+│       └── instructor/             # ~26 instructor API routes
 ├── components/
-│   ├── layout/
-│   │   ├── sidebar.tsx         # Collapsible sidebar navigation
-│   │   ├── header.tsx          # Page header with user info
-│   │   └── app-shell.tsx       # Auth-guarded shell wrapper
-│   └── ui/
-│       ├── card.tsx            # Card + CardHeader
-│       ├── badge.tsx           # Status badges
-│       ├── stat-card.tsx       # Metric display cards
-│       ├── page-wrapper.tsx    # Standard page layout
-│       └── empty-state.tsx     # Empty state placeholder
+│   ├── layout/                     # Student layout components
+│   ├── instructor/                 # Instructor layout components
+│   └── ui/                         # Shared UI components
 ├── lib/
-│   ├── types.ts                # TypeScript interfaces
-│   ├── domain/types.ts         # Normalized domain models
-│   ├── auth-context.tsx        # App authentication context
-│   └── utils.ts                # Utility functions
+│   ├── types.ts                    # Student TypeScript interfaces
+│   ├── instructor-types.ts         # Instructor TypeScript interfaces
+│   ├── auth-context.tsx            # Student auth (API-backed)
+│   ├── instructor-auth-context.tsx # Instructor auth (API-backed)
+│   ├── use-api.ts                  # Generic data fetching hook
+│   └── server/                     # Server-only code
+│       ├── db.ts                   # Prisma client singleton
+│       ├── auth/                   # Session, password, guards
+│       ├── services/               # Business logic
+│       └── storage/                # File storage adapter
+├── prisma/
+│   ├── schema.prisma               # 20 enums, 34 models
+│   └── seed.ts                     # Seed script
 ├── data/
-│   └── mock-data.ts            # All mock data (typed, fallback)
+│   ├── mock-data.ts                # Student mock data (fallback)
+│   └── instructor-mock-data.ts     # Instructor mock data (fallback)
 ├── docs/
-│   ├── context-log.md          # Project context source of truth
-│   ├── product-brief.md        # Product direction document
-│   └── design-system.md        # Design system documentation
-├── scripts/
-│   └── sync-readme-context.mjs # README context sync script
-├── .github/
-│   └── workflows/
-│       └── sync-readme.yml     # Example GitHub Actions workflow
+│   ├── backend-architecture.md     # Backend architecture reference
+│   ├── api-plan.md                 # API endpoint reference
+│   ├── data-model.md               # Database schema reference
+│   ├── context-log.md              # Project context
+│   ├── product-brief.md            # Product direction
+│   └── design-system.md            # Design system
 └── public/
 ```
 
 ## Setup
 
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL database
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and fill in:
+
+```env
+DATABASE_URL="postgresql://user:pass@localhost:5432/student_app"
+SESSION_SECRET="your-random-secret-at-least-32-chars"
+```
+
+### Install & Run
+
 ```bash
 # Install dependencies
 npm install
 
+# Generate Prisma client
+npm run db:generate
+
+# Run migrations
+npm run db:migrate
+
+# Seed the database
+npm run db:seed
+
 # Start development server
 npm run dev
-
-# Build for production
-npm run build
-
-# Sync context log into README
-npm run sync:readme
 ```
 
 The app will be available at `http://localhost:3000`.
 
-## Mock Data
+### Database Commands
 
-All mock data lives in [`data/mock-data.ts`](data/mock-data.ts). It includes:
+```bash
+npm run db:migrate   # Run Prisma migrations
+npm run db:push      # Push schema without migrations
+npm run db:seed      # Seed database with demo data
+npm run db:studio    # Open Prisma Studio GUI
+npm run db:generate  # Regenerate Prisma client
+npm run db:reset     # Reset database and re-seed
+```
 
-- Student profile
-- Demo credentials
-- Announcements
-- Today's classes
-- Assignments (with statuses)
-- Exams (with formats and types)
-- Courses (with attendance)
-- Finance summary and transactions
-- Calendar events
+## Documentation
 
-All data is typed via interfaces in [`lib/types.ts`](lib/types.ts).
+- [Backend Architecture](docs/backend-architecture.md) — auth, services, storage, guards
+- [API Plan](docs/api-plan.md) — all ~45 endpoints with methods and descriptions
+- [Data Model](docs/data-model.md) — 34 Prisma models, enums, relationships
+- [Design System](docs/design-system.md) — colors, typography, components
+- [Product Brief](docs/product-brief.md) — product direction and vision
 
 ## Future Roadmap
 
-### Phase 2 — Data Layer
-- Local storage persistence
-- External API integrations (read-only)
+### Phase 2
+- Assignment submission (student upload)
 - Pearson grade sync
+- Real-time notifications (WebSocket/SSE)
+- File preview (PDF, images)
 
-### Phase 3 — Enhanced Features
+### Phase 3
 - Absence report submission
 - Detailed financial reporting
+- Attendance analytics dashboards
 - Push notifications
-- Attendance analytics
 
-### Phase 4 — Platform
+### Phase 4
 - SIS integration
 - Mobile-responsive refinements
 - PWA capabilities
-
-### Planned Modules
-- Absence reporting
-- Financial reports
-- Pearson integration
-- SIS integration
-- Notifications system
-- Attendance analytics
+- Admin panel
 
 ## Limitations
 
-- **No backend**: All data is mocked locally
-- **No auth**: Login is hardcoded demo only
-- **No persistence**: State resets on refresh
-- **No integrations**: Pearson/SIS connections are planned for future versions
+- **5-minute session timeout**: Sessions expire after 5 minutes of inactivity (configurable)
+- **Local file storage**: Files stored on disk; cloud storage adapter ready but not implemented
+- **No real-time updates**: Polling-based; WebSocket support planned for Phase 2
 - **Desktop-first**: Basic responsiveness included, but optimized for desktop
 
 ## README Context Sync

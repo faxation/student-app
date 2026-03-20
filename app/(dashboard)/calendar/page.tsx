@@ -13,7 +13,7 @@ import {
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { calendarEvents as mockCalendarEvents } from "@/data/mock-data";
+import { useApi } from "@/lib/use-api";
 import { formatDate, daysUntil } from "@/lib/utils";
 
 // ─── Event type config ──────────────────────────────────────────
@@ -37,6 +37,23 @@ interface CalEvent {
   time: string | null;
   type: string;
   courseCode: string | null;
+}
+
+interface CalendarEventData {
+  id: string;
+  title: string;
+  type: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  courseCode: string;
+  sectionNumber: string;
+  time?: string;
+}
+
+interface CalendarResponse {
+  events: CalendarEventData[];
 }
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -190,12 +207,18 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [upcomingOpen, setUpcomingOpen] = useState(true);
 
+  const { data, loading, error } = useApi<CalendarResponse>("/api/student/calendar");
+
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" /></div>;
+  if (error) return <div className="p-6 text-red-600">Failed to load data.</div>;
+
   // ─── Normalize events ───────────────────────────────────────
-  const events: CalEvent[] = mockCalendarEvents.map((e) => ({
+  const rawEvents = data?.events ?? [];
+  const events: CalEvent[] = rawEvents.map((e) => ({
     id: e.id,
     title: e.title,
     date: e.date,
-    time: e.time ?? null,
+    time: e.time ?? e.startTime ?? null,
     type: e.type,
     courseCode: e.courseCode ?? null,
   }));

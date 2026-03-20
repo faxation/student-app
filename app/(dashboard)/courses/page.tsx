@@ -5,10 +5,42 @@ import { BookOpen, Users, Clock, Activity, BarChart3 } from "lucide-react";
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
-import { courses as mockCourses } from "@/data/mock-data";
+import { useApi } from "@/lib/use-api";
+
+interface CourseData {
+  id: string;
+  code: string;
+  name: string;
+  credits?: number;
+  instructor?: string;
+  schedule?: string;
+  latestActivity?: string;
+  section: {
+    id: string;
+    number: string;
+    instructor: string;
+    meetingTimes: string;
+    enrollmentCount: number;
+  };
+  attendance: {
+    absences: number;
+    warningLevel: string;
+    present?: number;
+    total?: number;
+  };
+}
+
+interface CoursesResponse {
+  courses: CourseData[];
+}
 
 export default function CoursesPage() {
-  const courses = mockCourses;
+  const { data, loading, error } = useApi<CoursesResponse>("/api/student/courses");
+
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" /></div>;
+  if (error) return <div className="p-6 text-red-600">Failed to load data.</div>;
+
+  const courses = data?.courses ?? [];
 
   return (
     <PageWrapper title="Courses" subtitle="Your enrolled courses this semester">
@@ -23,14 +55,14 @@ export default function CoursesPage() {
         />
         <StatCard
           label="Total Credits"
-          value={courses.reduce((s, c) => s + c.credits, 0)}
+          value={courses.reduce((s, c) => s + (c.credits ?? 0), 0)}
           subtitle="This semester"
           icon={<Activity size={20} />}
           accent="blue"
         />
         <StatCard
           label="Avg Attendance"
-          value={`${Math.round(courses.reduce((s, c) => s + (c.attendance.present / c.attendance.total) * 100, 0) / courses.length)}%`}
+          value={`${courses.length > 0 ? Math.round(courses.reduce((s, c) => s + ((c.attendance.present ?? 0) / (c.attendance.total ?? 1)) * 100, 0) / courses.length) : 0}%`}
           subtitle="Across all courses"
           icon={<BarChart3 size={20} />}
           accent="amber"
@@ -40,7 +72,9 @@ export default function CoursesPage() {
       {/* Course Cards */}
       <div className="page-grid-2">
         {courses.map((course) => {
-          const attendancePct = Math.round((course.attendance.present / course.attendance.total) * 100);
+          const attendancePct = (course.attendance.present && course.attendance.total)
+            ? Math.round((course.attendance.present / course.attendance.total) * 100)
+            : 0;
 
           return (
             <Link
@@ -59,17 +93,17 @@ export default function CoursesPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {course.instructor && (
+                  {(course.instructor || course.section?.instructor) && (
                     <div className="flex items-center gap-2 text-sm text-ink-600">
                       <Users size={14} className="text-ink-400" />
-                      <span>{course.instructor}</span>
+                      <span>{course.instructor ?? course.section?.instructor}</span>
                     </div>
                   )}
 
-                  {"schedule" in course && (
+                  {(course.schedule || course.section?.meetingTimes) && (
                     <div className="flex items-center gap-2 text-sm text-ink-600">
                       <Clock size={14} className="text-ink-400" />
-                      <span>{course.schedule}</span>
+                      <span>{course.schedule ?? course.section?.meetingTimes}</span>
                     </div>
                   )}
                 </div>
@@ -78,7 +112,7 @@ export default function CoursesPage() {
                 <div className="mt-5 pt-4 border-t border-surface-200">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-ink-500">Attendance</span>
-                    <span className="text-xs text-ink-600">{course.attendance.present}/{course.attendance.total} ({attendancePct}%)</span>
+                    <span className="text-xs text-ink-600">{course.attendance.present ?? 0}/{course.attendance.total ?? 0} ({attendancePct}%)</span>
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-surface-100">
                     <div

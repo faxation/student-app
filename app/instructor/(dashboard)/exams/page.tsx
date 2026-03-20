@@ -15,16 +15,52 @@ import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
-import {
-  instructorExams as initialExams,
-  instructorCourses,
-  instructorSections,
-} from "@/data/instructor-mock-data";
-import type { InstructorExam } from "@/lib/instructor-types";
+import { useApi } from "@/lib/use-api";
+
+interface Exam {
+  id: string;
+  title: string;
+  courseCode: string;
+  courseName: string;
+  sectionNumber: string;
+  sectionId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  weight: number;
+  type: string;
+  status: string;
+}
+
+interface ExamsResponse {
+  exams: Exam[];
+}
+
+interface Section {
+  id: string;
+  number: string;
+  courseCode: string;
+  courseName: string;
+  status: string;
+  modality: string;
+  meetingTimes: string;
+  enrollmentCount: number;
+  maxCapacity: number;
+}
+
+interface SectionsResponse {
+  sections: Section[];
+}
 
 export default function InstructorExamsPage() {
-  const [exams, setExams] = useState<InstructorExam[]>(initialExams);
+  const { data, loading, error, refetch } = useApi<ExamsResponse>("/api/instructor/exams");
   const [showForm, setShowForm] = useState(false);
+
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" /></div>;
+  if (error) return <div className="p-6 text-red-600">Failed to load data.</div>;
+
+  const exams = data?.exams ?? [];
 
   return (
     <InstructorPageWrapper title="Exams" subtitle="Manage and create exam files">
@@ -38,15 +74,15 @@ export default function InstructorExamsPage() {
           accent="brand"
         />
         <StatCard
-          label="With Files"
-          value={exams.filter((e) => e.hasFile).length}
-          subtitle="Files attached"
+          label="Upcoming"
+          value={exams.filter((e) => e.status === "scheduled").length}
+          subtitle="Scheduled exams"
           icon={<FileUp size={20} />}
           accent="blue"
         />
         <StatCard
           label="Courses Covered"
-          value={new Set(exams.map((e) => e.courseId)).size}
+          value={new Set(exams.map((e) => e.courseCode)).size}
           subtitle="Unique courses"
           icon={<Calendar size={20} />}
           accent="amber"
@@ -68,8 +104,8 @@ export default function InstructorExamsPage() {
       {showForm && (
         <CreateExamForm
           onClose={() => setShowForm(false)}
-          onSave={(exam) => {
-            setExams((prev) => [...prev, exam]);
+          onSave={() => {
+            refetch();
             setShowForm(false);
           }}
         />
@@ -89,8 +125,8 @@ export default function InstructorExamsPage() {
           <div className="col-span-4">Title</div>
           <div className="col-span-2">Course</div>
           <div className="col-span-2">Section</div>
-          <div className="col-span-2">Created</div>
-          <div className="col-span-2 text-right">File</div>
+          <div className="col-span-2">Date</div>
+          <div className="col-span-2 text-right">Type</div>
         </div>
 
         {/* Rows */}
@@ -117,22 +153,20 @@ export default function InstructorExamsPage() {
 
                 <div className="md:col-span-2">
                   <span className="text-sm text-ink-600">
-                    {exam.sectionLabel}
+                    Section {exam.sectionNumber}
                   </span>
                 </div>
 
                 <div className="md:col-span-2">
                   <span className="text-sm text-ink-600">
-                    {formatDate(exam.createdDate)}
+                    {formatDate(exam.date)}
                   </span>
                 </div>
 
                 <div className="md:col-span-2 md:text-right">
-                  {exam.hasFile ? (
-                    <Badge variant="success">{exam.fileType}</Badge>
-                  ) : (
-                    <Badge variant="warning">No file</Badge>
-                  )}
+                  <Badge variant={exam.status === "scheduled" ? "success" : "warning"}>
+                    {exam.type}
+                  </Badge>
                 </div>
               </div>
             ))
@@ -150,17 +184,22 @@ function CreateExamForm({
   onSave,
 }: {
   onClose: () => void;
-  onSave: (exam: InstructorExam) => void;
+  onSave: () => void;
 }) {
+  const { data: sectionsData } = useApi<SectionsResponse>("/api/instructor/sections");
+  const sections = sectionsData?.sections ?? [];
+
   const [title, setTitle] = useState("");
-  const [courseId, setCourseId] = useState("");
   const [sectionId, setSectionId] = useState("");
+  const [date, setDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [location, setLocation] = useState("");
+  const [weight, setWeight] = useState("");
+  const [type, setType] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
-
-  const availableSections = courseId
-    ? instructorSections.filter((s) => s.courseId === courseId)
-    : [];
+  const [submitting, setSubmitting] = useState(false);
 
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
@@ -179,30 +218,32 @@ function CreateExamForm({
     if (droppedFile) setFile(droppedFile);
   }, []);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const course = instructorCourses.find((c) => c.id === courseId);
-    const section = instructorSections.find((s) => s.id === sectionId);
-    if (!course || !section) return;
-
-    const fileExt = file
-      ? file.name.split(".").pop()?.toUpperCase() || "FILE"
-      : "";
-
-    const newExam: InstructorExam = {
-      id: `ie-${Date.now()}`,
-      title,
-      courseId: course.id,
-      courseCode: course.code,
-      courseName: course.name,
-      sectionId: section.id,
-      sectionLabel: section.label,
-      hasFile: !!file,
-      fileType: fileExt,
-      createdDate: new Date().toISOString().split("T")[0],
-    };
-
-    onSave(newExam);
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/instructor/exams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          sectionId,
+          date,
+          startTime,
+          endTime,
+          location,
+          weight: Number(weight),
+          type,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to create exam");
+      onSave();
+    } catch {
+      alert("Failed to create exam. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -235,30 +276,8 @@ function CreateExamForm({
           />
         </div>
 
-        {/* Course + Section row */}
+        {/* Section + Type row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-ink-700 mb-1.5">
-              Course
-            </label>
-            <select
-              value={courseId}
-              onChange={(e) => {
-                setCourseId(e.target.value);
-                setSectionId("");
-              }}
-              required
-              className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-            >
-              <option value="">Select course</option>
-              {instructorCourses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.code} – {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-ink-700 mb-1.5">
               Section
@@ -267,16 +286,104 @@ function CreateExamForm({
               value={sectionId}
               onChange={(e) => setSectionId(e.target.value)}
               required
-              disabled={!courseId}
-              className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-surface-100 disabled:text-ink-400"
+              className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             >
               <option value="">Select section</option>
-              {availableSections.map((s) => (
+              {sections.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.label} ({s.meetingTime})
+                  {s.courseCode} – Section {s.number} ({s.meetingTimes})
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-ink-700 mb-1.5">
+              Exam Type
+            </label>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              required
+              className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            >
+              <option value="">Select type</option>
+              <option value="midterm">Midterm</option>
+              <option value="final">Final</option>
+              <option value="quiz">Quiz</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Date + Time row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-ink-700 mb-1.5">
+              Date
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+              className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-ink-700 mb-1.5">
+              Start Time
+            </label>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              required
+              className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-ink-700 mb-1.5">
+              End Time
+            </label>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              required
+              className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+          </div>
+        </div>
+
+        {/* Location + Weight row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-ink-700 mb-1.5">
+              Location
+            </label>
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="e.g. Room 301"
+              required
+              className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-ink-700 mb-1.5">
+              Weight (% of final grade)
+            </label>
+            <input
+              type="number"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              placeholder="e.g. 25"
+              required
+              min="1"
+              max="100"
+              className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
           </div>
         </div>
 
@@ -344,9 +451,10 @@ function CreateExamForm({
         <div className="flex items-center gap-3 pt-2">
           <button
             type="submit"
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:ring-offset-2"
+            disabled={submitting}
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Create Exam
+            {submitting ? "Creating..." : "Create Exam"}
           </button>
           <button
             type="button"

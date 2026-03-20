@@ -5,15 +5,37 @@ import { BarChart3, Save, CheckCircle, Users } from "lucide-react";
 import { InstructorPageWrapper } from "@/components/instructor/page-wrapper";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
-import {
-  instructorCourses,
-  instructorSections,
-  sectionRosters,
-} from "@/data/instructor-mock-data";
-import type { GradeEntry } from "@/lib/instructor-types";
+import { useApi } from "@/lib/use-api";
+
+interface Section {
+  id: string;
+  number: string;
+  courseCode: string;
+  courseName: string;
+  status: string;
+  modality: string;
+  meetingTimes: string;
+  enrollmentCount: number;
+  maxCapacity: number;
+}
+
+interface SectionsResponse {
+  sections: Section[];
+}
+
+interface RosterStudent {
+  id: string;
+  name: string;
+  studentNumber: string;
+  currentGrade: number | null;
+  letterGrade: string | null;
+}
+
+interface RosterResponse {
+  roster: RosterStudent[];
+}
 
 export default function InstructorGradesPage() {
-  const [courseId, setCourseId] = useState("");
   const [sectionId, setSectionId] = useState("");
   const [grades, setGrades] = useState<Record<string, Record<string, string>>>(
     {}
@@ -22,41 +44,70 @@ export default function InstructorGradesPage() {
     "idle" | "saving" | "saved"
   >("idle");
 
-  const availableSections = courseId
-    ? instructorSections.filter((s) => s.courseId === courseId)
-    : [];
+  const { data: sectionsData, loading: sectionsLoading, error: sectionsError } =
+    useApi<SectionsResponse>("/api/instructor/sections");
 
-  const students = sectionId ? sectionRosters[sectionId] ?? [] : [];
+  const { data: rosterData, loading: rosterLoading } =
+    useApi<RosterResponse>(sectionId ? `/api/instructor/grades/roster?sectionId=${sectionId}` : null);
+
+  if (sectionsLoading) return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" /></div>;
+  if (sectionsError) return <div className="p-6 text-red-600">Failed to load data.</div>;
+
+  const sections = sectionsData?.sections ?? [];
+  const students = rosterData?.roster ?? [];
 
   // Get current grades for this section
   const currentGrades = sectionId ? grades[sectionId] ?? {} : {};
 
-  const handleGradeChange = useCallback(
-    (studentId: string, value: string) => {
-      if (!sectionId) return;
-      setGrades((prev) => ({
-        ...prev,
-        [sectionId]: {
-          ...prev[sectionId],
-          [studentId]: value,
-        },
-      }));
-      setSaveStatus("idle");
-    },
-    [sectionId]
-  );
+  const handleGradeChange = (studentId: string, value: string) => {
+    if (!sectionId) return;
+    setGrades((prev) => ({
+      ...prev,
+      [sectionId]: {
+        ...prev[sectionId],
+        [studentId]: value,
+      },
+    }));
+    setSaveStatus("idle");
+  };
 
   const handleSave = async () => {
+    if (!sectionId) return;
     setSaveStatus("saving");
-    // Simulate save delay
-    await new Promise((r) => setTimeout(r, 600));
-    setSaveStatus("saved");
-    setTimeout(() => setSaveStatus("idle"), 2000);
+    try {
+      const gradeEntries = Object.entries(currentGrades)
+        .filter(([, g]) => g.trim() !== "")
+        .map(([studentId, numericGrade]) => ({
+          studentId,
+          numericGrade: Number(numericGrade),
+        }));
+
+      const res = await fetch("/api/instructor/grades/bulk-save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sectionId, grades: gradeEntries }),
+      });
+      if (!res.ok) throw new Error("Failed to save grades");
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    } catch {
+      alert("Failed to save grades. Please try again.");
+      setSaveStatus("idle");
+    }
   };
 
   const filledCount = Object.values(currentGrades).filter(
     (g) => g.trim() !== ""
   ).length;
+
+  // Group sections by course for the dropdown
+  const courseMap = new Map<string, { code: string; name: string }>();
+  for (const s of sections) {
+    if (!courseMap.has(s.courseCode)) {
+      courseMap.set(s.courseCode, { code: s.courseCode, name: s.courseName });
+    }
+  }
+  const courses = Array.from(courseMap.values());
 
   return (
     <InstructorPageWrapper
@@ -67,14 +118,14 @@ export default function InstructorGradesPage() {
       <div className="page-grid-3 mb-8">
         <StatCard
           label="Courses"
-          value={instructorCourses.length}
+          value={courses.length}
           subtitle="Available to grade"
           icon={<BarChart3 size={20} />}
           accent="brand"
         />
         <StatCard
           label="Sections"
-          value={instructorSections.length}
+          value={sections.length}
           subtitle="Total sections"
           icon={<Users size={20} />}
           accent="blue"
@@ -99,58 +150,39 @@ export default function InstructorGradesPage() {
       {/* Selection Controls */}
       <Card className="mb-6">
         <h3 className="font-serif text-lg font-semibold text-ink-900 mb-4">
-          Select Course & Section
+          Select Section
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-ink-700 mb-1.5">
-              Course
-            </label>
-            <select
-              value={courseId}
-              onChange={(e) => {
-                setCourseId(e.target.value);
-                setSectionId("");
-                setSaveStatus("idle");
-              }}
-              className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-            >
-              <option value="">Select a course</option>
-              {instructorCourses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.code} – {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-ink-700 mb-1.5">
-              Section
-            </label>
-            <select
-              value={sectionId}
-              onChange={(e) => {
-                setSectionId(e.target.value);
-                setSaveStatus("idle");
-              }}
-              disabled={!courseId}
-              className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-surface-100 disabled:text-ink-400"
-            >
-              <option value="">Select a section</option>
-              {availableSections.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label} ({s.meetingTime})
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-ink-700 mb-1.5">
+            Section
+          </label>
+          <select
+            value={sectionId}
+            onChange={(e) => {
+              setSectionId(e.target.value);
+              setSaveStatus("idle");
+            }}
+            className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          >
+            <option value="">Select a section</option>
+            {sections.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.courseCode} – Section {s.number} ({s.meetingTimes})
+              </option>
+            ))}
+          </select>
         </div>
       </Card>
 
       {/* Grades Table */}
-      {sectionId && students.length > 0 && (
+      {sectionId && rosterLoading && (
+        <div className="flex items-center justify-center h-32">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+        </div>
+      )}
+
+      {sectionId && !rosterLoading && students.length > 0 && (
         <Card>
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -190,7 +222,7 @@ export default function InstructorGradesPage() {
 
                 <div className="col-span-3">
                   <span className="text-sm font-mono text-ink-600">
-                    {student.studentId}
+                    {student.studentNumber}
                   </span>
                 </div>
 
@@ -203,7 +235,7 @@ export default function InstructorGradesPage() {
                 <div className="col-span-3 flex justify-end">
                   <input
                     type="text"
-                    value={currentGrades[student.id] ?? ""}
+                    value={currentGrades[student.id] ?? (student.currentGrade != null ? String(student.currentGrade) : "")}
                     onChange={(e) =>
                       handleGradeChange(student.id, e.target.value)
                     }
@@ -257,7 +289,7 @@ export default function InstructorGradesPage() {
       )}
 
       {/* Empty state */}
-      {sectionId && students.length === 0 && (
+      {sectionId && !rosterLoading && students.length === 0 && (
         <Card>
           <div className="py-12 text-center">
             <Users size={32} className="mx-auto mb-3 text-ink-300" />
@@ -273,7 +305,7 @@ export default function InstructorGradesPage() {
           <div className="py-12 text-center">
             <BarChart3 size={32} className="mx-auto mb-3 text-ink-300" />
             <p className="text-sm text-ink-500">
-              Select a course and section above to view and input student grades.
+              Select a section above to view and input student grades.
             </p>
           </div>
         </Card>

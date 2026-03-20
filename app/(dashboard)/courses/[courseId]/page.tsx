@@ -15,9 +15,45 @@ import {
   FileSpreadsheet,
   Mail,
 } from "lucide-react";
-import { courses, courseDetails } from "@/data/mock-data";
+import { useApi } from "@/lib/use-api";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+
+interface Material {
+  id: string;
+  category: string;
+  title: string;
+  description: string | null;
+  fileType: string;
+  date: string | null;
+}
+
+interface Participant {
+  id: string;
+  name: string;
+  role: "Instructor" | "Student";
+  email: string;
+  initials: string;
+}
+
+interface GradeItem {
+  id: string;
+  title: string;
+  earnedScore: number;
+  maxScore: number;
+  weight: number;
+}
+
+interface CourseDetail {
+  courseId: string;
+  courseName: string;
+  courseCode: string;
+  materials: Material[];
+  participants: Participant[];
+  grades: GradeItem[];
+  totalGrade: number;
+  letterGrade: string;
+}
 
 type Tab = "materials" | "participants" | "grades";
 
@@ -59,10 +95,19 @@ export default function CourseDetailPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("materials");
 
-  const course = courses.find((c) => c.id === courseId);
-  const detail = courseId ? courseDetails[courseId] : undefined;
+  const { data, loading, error } = useApi<CourseDetail>(
+    courseId ? `/api/student/courses/${courseId}` : null
+  );
 
-  if (!course || !detail) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
@@ -78,6 +123,8 @@ export default function CourseDetailPage() {
     );
   }
 
+  const { materials, participants, grades, totalGrade, letterGrade } = data;
+
   return (
     <div className="min-h-screen">
       {/* Header bar */}
@@ -91,9 +138,9 @@ export default function CourseDetailPage() {
           </button>
           <div className="min-w-0 flex-1">
             <h1 className="font-serif text-xl font-semibold text-ink-900 truncate">
-              {course.name}
+              {data.courseName}
             </h1>
-            <p className="text-sm text-ink-500">{course.code} &middot; {course.instructor === "TBD" ? detail.participants.find((p) => p.role === "Instructor")?.name ?? "TBD" : course.instructor}</p>
+            <p className="text-sm text-ink-500">{data.courseCode} &middot; {participants.find((p) => p.role === "Instructor")?.name ?? "TBD"}</p>
           </div>
         </div>
 
@@ -118,13 +165,13 @@ export default function CourseDetailPage() {
 
       {/* Tab content */}
       <div className="p-8">
-        {activeTab === "materials" && <MaterialsTab materials={detail.materials} />}
-        {activeTab === "participants" && <ParticipantsTab participants={detail.participants} />}
+        {activeTab === "materials" && <MaterialsTab materials={materials} />}
+        {activeTab === "participants" && <ParticipantsTab participants={participants} />}
         {activeTab === "grades" && (
           <GradesTab
-            grades={detail.grades}
-            totalGrade={detail.totalGrade}
-            letterGrade={detail.letterGrade}
+            grades={grades}
+            totalGrade={totalGrade}
+            letterGrade={letterGrade}
           />
         )}
       </div>
@@ -133,7 +180,7 @@ export default function CourseDetailPage() {
 }
 
 /* ─── Materials Tab ─────────────────────────────────────────────── */
-function MaterialsTab({ materials }: { materials: typeof courseDetails[string]["materials"] }) {
+function MaterialsTab({ materials }: { materials: Material[] }) {
   const grouped = materials.reduce<Record<string, typeof materials>>((acc, m) => {
     const cat = m.category;
     if (!acc[cat]) acc[cat] = [];
@@ -202,7 +249,7 @@ function MaterialsTab({ materials }: { materials: typeof courseDetails[string]["
 }
 
 /* ─── Participants Tab ──────────────────────────────────────────── */
-function ParticipantsTab({ participants }: { participants: typeof courseDetails[string]["participants"] }) {
+function ParticipantsTab({ participants }: { participants: Participant[] }) {
   const instructor = participants.find((p) => p.role === "Instructor");
   const students = participants.filter((p) => p.role === "Student");
 
@@ -273,7 +320,7 @@ function GradesTab({
   totalGrade,
   letterGrade,
 }: {
-  grades: typeof courseDetails[string]["grades"];
+  grades: GradeItem[];
   totalGrade: number;
   letterGrade: string;
 }) {

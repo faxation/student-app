@@ -4,7 +4,7 @@ import { FileText, Clock, MapPin, Monitor, AlertTriangle } from "lucide-react";
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { exams as mockExams } from "@/data/mock-data";
+import { useApi } from "@/lib/use-api";
 import { formatDate, daysUntil, cn } from "@/lib/utils";
 
 const typeConfig = {
@@ -14,8 +14,36 @@ const typeConfig = {
   exam: { label: "Exam", variant: "danger" as const },
 };
 
+interface ExamData {
+  id: string;
+  title: string;
+  courseCode: string;
+  courseName: string;
+  sectionNumber: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  weight: number;
+  type: string;
+  status: string;
+  time?: string;
+  duration?: string;
+  room?: string;
+  format?: string;
+}
+
+interface ExamsResponse {
+  exams: ExamData[];
+}
+
 export default function ExamsPage() {
-  const exams = mockExams;
+  const { data, loading, error } = useApi<ExamsResponse>("/api/student/exams");
+
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" /></div>;
+  if (error) return <div className="p-6 text-red-600">Failed to load data.</div>;
+
+  const exams = data?.exams ?? [];
 
   const sortedExams = [...exams].sort((a, b) => a.date.localeCompare(b.date));
   const upcoming = sortedExams.filter((e) => daysUntil(e.date) >= 0);
@@ -38,7 +66,7 @@ export default function ExamsPage() {
                 {days === 0 ? "Exam today!" : days === 1 ? "Exam tomorrow!" : `Next exam in ${days} days`}
               </p>
               <p className={cn("mt-0.5 text-sm", days <= 2 ? "text-red-600" : "text-amber-600")}>
-                {nearest.courseName} ({nearest.courseCode}) — {nearest.time}
+                {nearest.courseName} ({nearest.courseCode}) — {nearest.time ?? nearest.startTime}
               </p>
             </div>
           </div>
@@ -60,7 +88,7 @@ export default function ExamsPage() {
           {sortedExams.map((exam) => {
             const days = daysUntil(exam.date);
             const isPast = days < 0;
-            const config = typeConfig[exam.type] ?? typeConfig.exam;
+            const config = typeConfig[exam.type as keyof typeof typeConfig] ?? typeConfig.exam;
 
             return (
               <Card key={exam.id} hover className={isPast ? "opacity-60" : ""}>
@@ -89,7 +117,7 @@ export default function ExamsPage() {
                   <div className="flex items-center gap-3 text-sm">
                     <div className="flex items-center gap-2 text-ink-500">
                       <Clock size={14} className="text-ink-400" />
-                      <span>{exam.time} ({exam.duration})</span>
+                      <span>{exam.time ?? exam.startTime} ({exam.duration ?? `${exam.startTime} - ${exam.endTime}`})</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
@@ -99,7 +127,7 @@ export default function ExamsPage() {
                       ) : (
                         <MapPin size={14} className="text-ink-400" />
                       )}
-                      <span>{exam.room}</span>
+                      <span>{exam.room ?? exam.location}</span>
                     </div>
                     <Badge variant={exam.format === "online" ? "info" : "default"}>
                       {exam.format === "online" ? "Online" : "In-Person"}

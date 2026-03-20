@@ -5,11 +5,32 @@ import { InstructorPageWrapper } from "@/components/instructor/page-wrapper";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
-import { instructorSections } from "@/data/instructor-mock-data";
+import { useApi } from "@/lib/use-api";
+
+interface Section {
+  id: string;
+  number: string;
+  courseCode: string;
+  courseName: string;
+  status: string;
+  modality: string;
+  meetingTimes: string;
+  enrollmentCount: number;
+  maxCapacity: number;
+}
+
+interface SectionsResponse {
+  sections: Section[];
+}
 
 export default function InstructorSectionsPage() {
-  const sections = instructorSections;
-  const totalStudents = sections.reduce((s, sec) => s + sec.enrolledCount, 0);
+  const { data, loading, error } = useApi<SectionsResponse>("/api/instructor/sections");
+
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" /></div>;
+  if (error) return <div className="p-6 text-red-600">Failed to load data.</div>;
+
+  const sections = data?.sections ?? [];
+  const totalStudents = sections.reduce((s, sec) => s + sec.enrollmentCount, 0);
 
   return (
     <InstructorPageWrapper title="Sections" subtitle="All sections you are teaching">
@@ -31,7 +52,7 @@ export default function InstructorSectionsPage() {
         />
         <StatCard
           label="Avg Class Size"
-          value={Math.round(totalStudents / sections.length)}
+          value={sections.length > 0 ? Math.round(totalStudents / sections.length) : 0}
           subtitle="Students per section"
           icon={<Users size={20} />}
           accent="amber"
@@ -62,7 +83,7 @@ export default function InstructorSectionsPage() {
               className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 p-4 items-center transition-colors hover:bg-surface-50"
             >
               <div className="md:col-span-2">
-                <Badge variant="brand">{section.label}</Badge>
+                <Badge variant="brand">Section {section.number}</Badge>
               </div>
 
               <div className="md:col-span-3">
@@ -81,14 +102,14 @@ export default function InstructorSectionsPage() {
               <div className="md:col-span-3">
                 <div className="flex items-center gap-1.5 text-sm text-ink-600">
                   <Clock size={14} className="text-ink-400" />
-                  <span>{section.meetingTime}</span>
+                  <span>{section.meetingTimes}</span>
                 </div>
               </div>
 
               <div className="md:col-span-2 md:text-right">
                 <div className="flex items-center gap-1.5 md:justify-end text-sm text-ink-600">
                   <Users size={14} className="text-ink-400" />
-                  <span>{section.enrolledCount} students</span>
+                  <span>{section.enrollmentCount} students</span>
                 </div>
               </div>
             </div>

@@ -27,10 +27,7 @@ export default function LoginPage() {
     setError("");
     setIsLoading(true);
 
-    // Simulate brief loading state
-    await new Promise((r) => setTimeout(r, 400));
-
-    const success = login(username, password);
+    const success = await login(username, password);
     if (success) {
       router.push("/home");
     } else {

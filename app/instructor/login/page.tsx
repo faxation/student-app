@@ -26,9 +26,7 @@ export default function InstructorLoginPage() {
     setError("");
     setIsLoading(true);
 
-    await new Promise((r) => setTimeout(r, 400));
-
-    const success = login(username, password);
+    const success = await login(username, password);
     if (success) {
       router.push("/instructor/courses");
     } else {

@@ -1,57 +1,63 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
-import { DEMO_CREDENTIALS, studentProfile } from "@/data/mock-data";
 import type { StudentProfile } from "@/lib/types";
-
-const SESSION_KEY = "student-app-auth";
 
 interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   student: StudentProfile | null;
-  login: (username: string, password: string) => boolean;
-  logout: () => void;
+  login: (username: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
-
-function getStoredAuth(): boolean {
-  if (typeof window === "undefined") return false;
-  return sessionStorage.getItem(SESSION_KEY) === "true";
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [student, setStudent] = useState<StudentProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restore session on mount
+  // Restore session on mount via backend session API
   useEffect(() => {
-    if (getStoredAuth()) {
-      setIsAuthenticated(true);
-      setStudent(studentProfile);
-    }
-    setIsLoading(false);
+    fetch("/api/student/auth/session")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.user) {
+          setIsAuthenticated(true);
+          setStudent(data.user);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   }, []);
 
-  const login = useCallback((username: string, password: string): boolean => {
-    if (
-      username === DEMO_CREDENTIALS.username &&
-      password === DEMO_CREDENTIALS.password
-    ) {
-      setIsAuthenticated(true);
-      setStudent(studentProfile);
-      sessionStorage.setItem(SESSION_KEY, "true");
-      return true;
-    }
-    return false;
-  }, []);
+  const login = useCallback(
+    async (username: string, password: string): Promise<boolean> => {
+      try {
+        const res = await fetch("/api/student/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (res.ok && data.user) {
+          setIsAuthenticated(true);
+          setStudent(data.user);
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    },
+    []
+  );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await fetch("/api/student/auth/logout", { method: "POST" }).catch(() => {});
     setIsAuthenticated(false);
     setStudent(null);
-    sessionStorage.removeItem(SESSION_KEY);
   }, []);
 
   return (

@@ -6,7 +6,7 @@ import { PageWrapper } from "@/components/ui/page-wrapper";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/ui/stat-card";
-import { assignments as mockAssignments } from "@/data/mock-data";
+import { useApi } from "@/lib/use-api";
 import { formatDate, daysUntil } from "@/lib/utils";
 
 const PEARSON_PORTAL_URL = "https://login.pearson.com/v1/piapi/iesui/signin";
@@ -19,9 +19,30 @@ const statusConfig = {
   unknown: { label: "Unknown", variant: "default" as const },
 };
 
+interface AssignmentData {
+  id: string;
+  title: string;
+  courseCode: string;
+  courseName: string;
+  sectionNumber: string;
+  dueDate: string;
+  weight: number;
+  status: string;
+  description: string;
+}
+
+interface AssignmentsResponse {
+  assignments: AssignmentData[];
+}
+
 export default function AssignmentsPage() {
   const [assignmentsOpen, setAssignmentsOpen] = useState(true);
-  const assignments = mockAssignments;
+  const { data, loading, error } = useApi<AssignmentsResponse>("/api/student/assignments");
+
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" /></div>;
+  if (error) return <div className="p-6 text-red-600">Failed to load data.</div>;
+
+  const assignments = data?.assignments ?? [];
 
   const pending = assignments.filter((a) => a.status === "pending");
   const submitted = assignments.filter((a) => a.status === "submitted");
@@ -92,7 +113,7 @@ export default function AssignmentsPage() {
               ) : (
                 assignments.map((assignment) => {
                   const days = assignment.dueDate ? daysUntil(assignment.dueDate) : 999;
-                  const config = statusConfig[assignment.status] ?? statusConfig.unknown;
+                  const config = statusConfig[assignment.status as keyof typeof statusConfig] ?? statusConfig.unknown;
 
                   return (
                     <div

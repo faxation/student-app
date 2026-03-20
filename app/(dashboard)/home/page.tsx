@@ -13,31 +13,32 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth-context";
-import {
-  announcements as mockAnnouncements,
-  weeklySchedule,
-  assignments as mockAssignments,
-  exams as mockExams,
-  courses as mockCourses,
-} from "@/data/mock-data";
+import { useApi } from "@/lib/use-api";
 import { formatDate, daysUntil } from "@/lib/utils";
+
+interface HomeData {
+  todayClasses: { id: string; time: string; endTime: string; courseName: string; courseCode: string }[];
+  upcomingDeadlines: { id: string; title: string; courseCode: string; dueDate: string; status: string }[];
+  announcements: { id: string; title: string; body: string; date: string; category: string }[];
+  quickStats: {
+    enrolledCourses: number;
+    pendingAssignments: number;
+    upcomingExams: number;
+    unreadNotifications: number;
+  };
+}
 
 export default function HomePage() {
   const { student } = useAuth();
+  const { data, loading, error } = useApi<HomeData>("/api/student/home");
 
-  const coursesCount = mockCourses.length;
-  const assignments = mockAssignments;
-  const examsCount = mockExams.filter((e) => daysUntil(e.date) >= 0).length;
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" /></div>;
+  if (error) return <div className="p-6 text-red-600">Failed to load data.</div>;
 
-  const pendingAssignments = assignments.filter((a) => a.status === "pending");
-  const upcomingDeadlines = [...assignments]
-    .filter((a) => a.status === "pending" && a.dueDate)
-    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
-    .slice(0, 4);
-
-  // Today's classes from weekly schedule
-  const dayName = new Date().toLocaleDateString("en-US", { weekday: "long" });
-  const todayClasses = weeklySchedule[dayName] ?? [];
+  const todayClasses = data?.todayClasses ?? [];
+  const upcomingDeadlines = data?.upcomingDeadlines ?? [];
+  const announcements = data?.announcements ?? [];
+  const quickStats = data?.quickStats ?? { enrolledCourses: 0, pendingAssignments: 0, upcomingExams: 0, unreadNotifications: 0 };
 
   return (
     <PageWrapper
@@ -55,21 +56,21 @@ export default function HomePage() {
         />
         <StatCard
           label="Active Courses"
-          value={coursesCount}
-          subtitle={`${mockCourses.reduce((s, c) => s + c.credits, 0)} credits`}
+          value={quickStats.enrolledCourses}
+          subtitle="This semester"
           icon={<BookOpen size={20} />}
           accent="blue"
         />
         <StatCard
           label="Pending Assignments"
-          value={pendingAssignments.length}
+          value={quickStats.pendingAssignments}
           subtitle="Due this month"
           icon={<ClipboardList size={20} />}
           accent="amber"
         />
         <StatCard
           label="Upcoming Exams"
-          value={examsCount}
+          value={quickStats.upcomingExams}
           subtitle="Next 2 weeks"
           icon={<FileText size={20} />}
           accent="red"
@@ -152,7 +153,7 @@ export default function HomePage() {
             }
           />
           <div className="space-y-3">
-            {mockAnnouncements.map((ann) => (
+            {announcements.map((ann) => (
               <div
                 key={ann.id}
                 className="rounded-lg border border-surface-200 p-4 transition-colors hover:bg-surface-50"

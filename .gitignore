@@ -29,6 +29,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# uploads (local file storage)
+/uploads
+
+# prisma
+prisma/migrations/*/migration_lock.toml
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

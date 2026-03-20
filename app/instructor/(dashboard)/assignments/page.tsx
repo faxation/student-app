@@ -15,18 +15,49 @@ import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
-import {
-  instructorAssignments as initialAssignments,
-  instructorCourses,
-  instructorSections,
-} from "@/data/instructor-mock-data";
-import type { InstructorAssignment } from "@/lib/instructor-types";
+import { useApi } from "@/lib/use-api";
+
+interface Assignment {
+  id: string;
+  title: string;
+  courseCode: string;
+  courseName: string;
+  sectionNumber: string;
+  sectionId: string;
+  dueDate: string;
+  weight: number;
+  status: string;
+  description: string;
+}
+
+interface AssignmentsResponse {
+  assignments: Assignment[];
+}
+
+interface Section {
+  id: string;
+  number: string;
+  courseCode: string;
+  courseName: string;
+  status: string;
+  modality: string;
+  meetingTimes: string;
+  enrollmentCount: number;
+  maxCapacity: number;
+}
+
+interface SectionsResponse {
+  sections: Section[];
+}
 
 export default function InstructorAssignmentsPage() {
-  const [assignments, setAssignments] =
-    useState<InstructorAssignment[]>(initialAssignments);
+  const { data, loading, error, refetch } = useApi<AssignmentsResponse>("/api/instructor/assignments");
   const [showForm, setShowForm] = useState(false);
 
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" /></div>;
+  if (error) return <div className="p-6 text-red-600">Failed to load data.</div>;
+
+  const assignments = data?.assignments ?? [];
   const published = assignments.filter((a) => a.status === "published");
   const drafts = assignments.filter((a) => a.status === "draft");
 
@@ -75,8 +106,8 @@ export default function InstructorAssignmentsPage() {
       {showForm && (
         <CreateAssignmentForm
           onClose={() => setShowForm(false)}
-          onSave={(a) => {
-            setAssignments((prev) => [...prev, a]);
+          onSave={() => {
+            refetch();
             setShowForm(false);
           }}
         />
@@ -117,9 +148,6 @@ export default function InstructorAssignmentsPage() {
               >
                 <div className="md:col-span-3">
                   <div className="flex items-center gap-2">
-                    {assignment.hasFile && (
-                      <FileText size={14} className="text-ink-400 shrink-0" />
-                    )}
                     <p className="text-sm font-medium text-ink-900 truncate">
                       {assignment.title}
                     </p>
@@ -132,7 +160,7 @@ export default function InstructorAssignmentsPage() {
 
                 <div className="md:col-span-2">
                   <span className="text-sm text-ink-600">
-                    {assignment.sectionLabel}
+                    Section {assignment.sectionNumber}
                   </span>
                 </div>
 
@@ -175,19 +203,19 @@ function CreateAssignmentForm({
   onSave,
 }: {
   onClose: () => void;
-  onSave: (assignment: InstructorAssignment) => void;
+  onSave: () => void;
 }) {
+  const { data: sectionsData } = useApi<SectionsResponse>("/api/instructor/sections");
+  const sections = sectionsData?.sections ?? [];
+
   const [title, setTitle] = useState("");
-  const [courseId, setCourseId] = useState("");
   const [sectionId, setSectionId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [weight, setWeight] = useState("");
+  const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
-
-  const availableSections = courseId
-    ? instructorSections.filter((s) => s.courseId === courseId)
-    : [];
+  const [submitting, setSubmitting] = useState(false);
 
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
@@ -206,27 +234,29 @@ function CreateAssignmentForm({
     if (droppedFile) setFile(droppedFile);
   }, []);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const course = instructorCourses.find((c) => c.id === courseId);
-    const section = instructorSections.find((s) => s.id === sectionId);
-    if (!course || !section) return;
-
-    const newAssignment: InstructorAssignment = {
-      id: `ia-${Date.now()}`,
-      title,
-      courseId: course.id,
-      courseCode: course.code,
-      courseName: course.name,
-      sectionId: section.id,
-      sectionLabel: section.label,
-      dueDate,
-      weight: Number(weight),
-      hasFile: !!file,
-      status: "published",
-    };
-
-    onSave(newAssignment);
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/instructor/assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description,
+          sectionId,
+          dueDate,
+          weight: Number(weight),
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to create assignment");
+      onSave();
+    } catch {
+      alert("Failed to create assignment. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -259,49 +289,38 @@ function CreateAssignmentForm({
           />
         </div>
 
-        {/* Course + Section row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-ink-700 mb-1.5">
-              Course
-            </label>
-            <select
-              value={courseId}
-              onChange={(e) => {
-                setCourseId(e.target.value);
-                setSectionId("");
-              }}
-              required
-              className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-            >
-              <option value="">Select course</option>
-              {instructorCourses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.code} – {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Description */}
+        <div>
+          <label className="block text-sm font-medium text-ink-700 mb-1.5">
+            Description
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Assignment description..."
+            rows={3}
+            className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          />
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-ink-700 mb-1.5">
-              Section
-            </label>
-            <select
-              value={sectionId}
-              onChange={(e) => setSectionId(e.target.value)}
-              required
-              disabled={!courseId}
-              className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-surface-100 disabled:text-ink-400"
-            >
-              <option value="">Select section</option>
-              {availableSections.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label} ({s.meetingTime})
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Section */}
+        <div>
+          <label className="block text-sm font-medium text-ink-700 mb-1.5">
+            Section
+          </label>
+          <select
+            value={sectionId}
+            onChange={(e) => setSectionId(e.target.value)}
+            required
+            className="w-full rounded-lg border border-surface-300 bg-white px-4 py-2.5 text-sm text-ink-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          >
+            <option value="">Select section</option>
+            {sections.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.courseCode} – Section {s.number} ({s.meetingTimes})
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Due Date + Weight row */}
@@ -400,9 +419,10 @@ function CreateAssignmentForm({
         <div className="flex items-center gap-3 pt-2">
           <button
             type="submit"
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:ring-offset-2"
+            disabled={submitting}
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Create Assignment
+            {submitting ? "Creating..." : "Create Assignment"}
           </button>
           <button
             type="button"
